@@ -5,7 +5,7 @@ use std::{
 
 use icalendar::Calendar;
 
-use crate::debug;
+use crate::{debug, logging::is_verbose};
 
 pub struct State {
     cal: Vec<Calendar>,
@@ -19,6 +19,31 @@ pub enum FailReason {
 
 impl State {
     pub fn new(dir: PathBuf, readonly: bool) -> Self {
+        fn load_calendar(path: PathBuf) -> Calendar {
+            use std::str::FromStr;
+            let mut cal = Calendar::new();
+
+            if let Ok(entries) = fs::read_dir(&path) {
+                entries.filter_map(|e| e.ok()).for_each(|e| {
+                    if e.path().extension().and_then(|e| e.to_str()) == Some("ics") {
+                        if let Ok(contents) = fs::read_to_string(e.path()) {
+                            if let Ok(parsed) = Calendar::from_str(&contents) {
+                                cal.extend(parsed.components);
+                            } else {
+                                eprintln!("Failed to parse {:?}", e.path());
+                            }
+                        } else {
+                            eprintln!("Failed to read from file {:?}", e.path());
+                        }
+                    }
+                })
+            } else {
+                eprintln!("Failed to list files in {:?}", path);
+            }
+            debug!("Loaded {} components from {:?}", cal.components.len(), path);
+            cal
+        }
+
         let Ok(entries) = fs::read_dir(&dir) else {
             panic!("Failed to read directory: {}", dir.display());
         };
@@ -33,8 +58,14 @@ impl State {
             })
             .collect();
         debug!("Discovered {} calendars.", cals.len());
+
+        if is_verbose() {
+            cals.iter()
+                .for_each(|c| debug!("Calendar {:?} found in path {:?}", c.file_name(), c.path()));
+        }
+
         Self {
-            cal: todo!(),
+            cal: cals.into_iter().map(|c| load_calendar(c.path())).collect(),
             readonly,
         }
     }
