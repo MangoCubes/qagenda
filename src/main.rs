@@ -21,7 +21,7 @@ struct Args {
 
 fn default_dir() -> PathBuf {
     #[cfg(debug_assertions)]
-    return PathBuf::from("./events");
+    return PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("events");
     #[cfg(not(debug_assertions))]
     return PathBuf::from(std::env::var("HOME").expect("No home???")).join(".calendar");
 }
