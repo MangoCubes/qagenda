@@ -69,6 +69,7 @@ impl State {
             readonly,
         }
     }
+
     pub fn toggle_task_complete(&self) -> Result<(), FailReason> {
         if self.readonly {
             return Err(FailReason::NotAllowed);

@@ -3,9 +3,11 @@ mod logging;
 mod state;
 mod ui;
 
+use std::path::PathBuf;
+
 use clap::Parser;
 
-use crate::state::State;
+use crate::{config::io::load_config, state::State};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,6 +17,10 @@ struct Args {
 
     #[arg(short, long)]
     readonly: bool,
+
+    /// Path to config file
+    #[arg(short, long)]
+    config: Option<PathBuf>,
 }
 
 fn main() {
@@ -23,8 +29,9 @@ fn main() {
         logging::set_verbose(true);
     }
 
-    debug!("Verbose mode enabled");
-    debug!("Using directory: {:?}", args.caldir);
+    let config = load_config(args.config.as_deref());
 
-    let state = State::new(args.caldir, args.readonly);
+    debug!("Using directory: {:?}", config.dir);
+
+    let state = State::new(config.dir, args.readonly);
 }
