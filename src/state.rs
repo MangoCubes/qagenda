@@ -7,6 +7,7 @@ use icalendar::Calendar;
 
 use crate::{debug, logging::is_verbose};
 
+#[derive(Clone)]
 pub struct State {
     cal: Vec<Calendar>,
     readonly: bool,

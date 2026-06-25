@@ -6,8 +6,12 @@ mod ui;
 use std::path::PathBuf;
 
 use clap::Parser;
+use gtk4::{
+    Application,
+    gio::prelude::{ApplicationExt, ApplicationExtManual},
+};
 
-use crate::{config::io::load_config, state::State};
+use crate::{config::io::load_config, state::State, ui::build_ui};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -29,9 +33,17 @@ fn main() {
         logging::set_verbose(true);
     }
 
-    let config = load_config(args.config.as_deref());
+    let app = Application::builder()
+        .application_id("ch.skew.qcal")
+        .build();
 
-    debug!("Using directory: {:?}", config.dir);
+    app.connect_activate(move |app| {
+        let config = load_config(args.config.as_deref());
+        let state = State::new(config.dir.clone(), args.readonly);
+        debug!("Using directory: {:?}", config.dir);
 
-    let state = State::new(config.dir, args.readonly);
+        build_ui(app, config, state);
+    });
+
+    app.run_with_args::<String>(&[]);
 }
