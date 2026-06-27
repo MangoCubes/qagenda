@@ -7,9 +7,9 @@ use gtk4::{
     gdk::{Display, Key},
     gio::prelude::ApplicationExt,
     glib::Propagation,
-    prelude::{GtkWindowExt, WidgetExt},
+    prelude::*,
 };
-use gtk4::{Box, Separator};
+use gtk4::{Box, PolicyType, ScrolledWindow, Separator};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 use serde::{Deserialize, Serialize};
@@ -114,6 +114,19 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
 
     let divider = Separator::builder().build();
     vbox.append(&divider);
+
+    let title = Label::new(Some("Agenda"));
+    title.set_halign(gtk4::Align::Start);
+    title.add_css_class("section-title");
+    vbox.append(&title);
+
+    let agenda = Box::new(Orientation::Vertical, 4);
+    for summary in state.get_agenda() {
+        let label = Label::new(Some(&summary));
+        label.set_halign(gtk4::Align::Start);
+        label.add_css_class("agenda-item");
+        agenda.append(&label);
+    }
 
     window.set_child(Some(&vbox));
     window.present();

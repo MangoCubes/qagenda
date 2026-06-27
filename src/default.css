@@ -21,3 +21,14 @@ label {
 	color: white;
 	text-shadow: 0px 0px 2px rgb(71, 200, 192), 0px 0px 2px rgb(71, 200, 192);
 }
+
+.section-title {
+	font-weight: bold;
+	margin-top: 4px;
+	margin-bottom: 4px;
+}
+
+.agenda-item {
+	border: 1px solid rgba(71, 200, 192, 1);
+	padding: 4px;
+}

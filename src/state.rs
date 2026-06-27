@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-use icalendar::Calendar;
+use icalendar::{Calendar, CalendarComponent, Component};
 
 use crate::{debug, logging::is_verbose};
 
@@ -76,5 +76,17 @@ impl State {
             return Err(FailReason::NotAllowed);
         }
         Ok(())
+    }
+
+    pub fn get_agenda(&self) -> Vec<String> {
+        self.cal
+            .iter()
+            .flat_map(|c| &c.components)
+            .filter_map(|comp| match comp {
+                CalendarComponent::Event(e) => e.get_summary().map(|s| s.to_string()),
+                CalendarComponent::Todo(t) => t.get_summary().map(|s| s.to_string()),
+                _ => None,
+            })
+            .collect()
     }
 }
