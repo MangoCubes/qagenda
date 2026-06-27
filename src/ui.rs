@@ -14,6 +14,28 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 use crate::{config::Config, state::State};
 
+pub enum Tab {
+    Tasks { past: bool },
+    Events,
+}
+
+pub enum DisplayType {
+    Day,
+    Week,
+    Month,
+}
+
+pub enum Focus {
+    Agenda,
+    Calendar,
+}
+
+pub struct UIState {
+    tab: Tab,
+    cal: DisplayType,
+    focus: Focus,
+}
+
 pub fn build_ui(app: &Application, config: Config, state: State) {
     let window = ApplicationWindow::builder()
         .application(app)
