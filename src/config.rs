@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ui::UIState;
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Anchor {
@@ -25,6 +27,8 @@ pub struct Config {
     pub expand: bool,
     pub anchor: Anchor,
     pub css: String,
+    #[serde(rename = "initState")]
+    pub init_state: UIState,
 }
 
 impl Default for Config {
@@ -38,6 +42,7 @@ impl Default for Config {
             expand: true,
             anchor: Anchor::TopRight,
             css: include_str!("./default.css").to_string(),
+            init_state: UIState::default(),
         }
     }
 }

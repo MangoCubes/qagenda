@@ -12,28 +12,49 @@ use gtk4::{
 use gtk4::{Box, Separator};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{config::Config, state::State};
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum Tab {
+    /// Displays tasks only. Has a section below that contains all completed tasks.
     Tasks { past: bool },
-    Events,
+    /// Displays tasks and events. Tasks are displayed only if [`show_tasks`] is true and the due
+    /// date is the curretly displayed date.
+    Events { show_tasks: bool },
 }
 
+impl Default for Tab {
+    fn default() -> Self {
+        Self::Events { show_tasks: false }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum DisplayType {
     Day,
+    #[default]
     Week,
     Month,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum Focus {
+    #[default]
     Agenda,
     Calendar,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, Eq)]
+#[serde(default)]
 pub struct UIState {
-    tab: Tab,
-    cal: DisplayType,
-    focus: Focus,
+    pub tab: Tab,
+    pub cal: DisplayType,
+    pub focus: Focus,
 }
 
 pub fn build_ui(app: &Application, config: Config, state: State) {
@@ -79,6 +100,7 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     window.add_controller(key_controller);
 
     let items = Arc::new(Mutex::new(state.clone()));
+    let ui_state = Arc::new(Mutex::new(config.init_state.clone()));
 
     let now = Local::now().format("%Y/%m/%d").to_string();
     let date = Label::new(Some(&now));
@@ -86,6 +108,9 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let vbox = Box::new(Orientation::Vertical, 0);
 
     vbox.append(&date);
+
+    let divider = Separator::builder().build();
+    vbox.append(&divider);
 
     let divider = Separator::builder().build();
     vbox.append(&divider);
