@@ -802,7 +802,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "quick-rs"
+name = "qcal"
 version = "0.1.0"
 dependencies = [
  "chrono",
