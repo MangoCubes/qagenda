@@ -1,15 +1,17 @@
 use std::{
+    collections::HashMap,
     fs::{self, DirEntry},
     path::PathBuf,
+    str::FromStr,
 };
 
 use icalendar::{Calendar, CalendarComponent, Component};
 
-use crate::{debug, logging::is_verbose};
+use crate::debug;
 
 #[derive(Clone)]
 pub struct State {
-    cal: Vec<Calendar>,
+    cal: HashMap<String, Calendar>,
     readonly: bool,
 }
 
@@ -21,7 +23,6 @@ pub enum FailReason {
 impl State {
     pub fn new(dir: PathBuf, readonly: bool) -> Self {
         fn load_calendar(path: PathBuf) -> Calendar {
-            use std::str::FromStr;
             let mut cal = Calendar::new();
 
             if let Ok(entries) = fs::read_dir(&path) {
@@ -37,7 +38,7 @@ impl State {
                             eprintln!("Failed to read from file {:?}", e.path());
                         }
                     }
-                })
+                });
             } else {
                 eprintln!("Failed to list files in {:?}", path);
             }
@@ -45,10 +46,14 @@ impl State {
             cal
         }
 
-        let Ok(entries) = fs::read_dir(&dir) else {
-            panic!("Failed to read directory: {}", dir.display());
-        };
-        let cals: Vec<DirEntry> = entries
+        let cals: Vec<DirEntry> = fs::read_dir(&dir)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Warning: Failed to read calendar directory {}: {}",
+                    dir.display(),
+                    e
+                );
+            })
             .filter_map(|r| r.ok())
             .filter(|e| {
                 if let Ok(t) = e.file_type() {
@@ -58,29 +63,25 @@ impl State {
                 }
             })
             .collect();
+
         debug!("Discovered {} calendars.", cals.len());
+        cals.iter()
+            .for_each(|c| debug!("Calendar {:?} found in path {:?}", c.file_name(), c.path()));
 
-        if is_verbose() {
-            cals.iter()
-                .for_each(|c| debug!("Calendar {:?} found in path {:?}", c.file_name(), c.path()));
-        }
+        let cal: HashMap<String, Calendar> = cals
+            .into_iter()
+            .map(|c| {
+                let name = c.file_name().to_string_lossy().to_string();
+                (name, load_calendar(c.path()))
+            })
+            .collect();
 
-        Self {
-            cal: cals.into_iter().map(|c| load_calendar(c.path())).collect(),
-            readonly,
-        }
-    }
-
-    pub fn toggle_task_complete(&self) -> Result<(), FailReason> {
-        if self.readonly {
-            return Err(FailReason::NotAllowed);
-        }
-        Ok(())
+        Self { cal, readonly }
     }
 
     pub fn get_agenda(&self) -> Vec<String> {
         self.cal
-            .iter()
+            .values()
             .flat_map(|c| &c.components)
             .filter_map(|comp| match comp {
                 CalendarComponent::Event(e) => e.get_summary().map(|s| s.to_string()),
