@@ -34,7 +34,7 @@ fn main() {
     }
 
     let app = Application::builder()
-        .application_id("ch.skew.qcal")
+        .application_id(format!("ch.skew.{}", env!("CARGO_PKG_NAME")))
         .build();
 
     app.connect_activate(move |app| {

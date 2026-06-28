@@ -1,9 +1,10 @@
 pub mod io;
+pub mod keybinds;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ui::UIState;
+use crate::{config::keybinds::KeyBinds, ui::UIState};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "lowercase")]
@@ -29,6 +30,7 @@ pub struct Config {
     pub css: String,
     #[serde(rename = "initState")]
     pub init_state: UIState,
+    pub keybinds: KeyBinds,
 }
 
 impl Default for Config {
@@ -43,6 +45,7 @@ impl Default for Config {
             anchor: Anchor::TopRight,
             css: include_str!("./default.css").to_string(),
             init_state: UIState::default(),
+            keybinds: KeyBinds::default(),
         }
     }
 }
