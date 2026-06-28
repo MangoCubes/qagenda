@@ -5,28 +5,33 @@ use crate::config::Config;
 use crate::{debug, error};
 
 fn get_default_config_path() -> Option<PathBuf> {
-    let name = env!("CARGO_PKG_NAME");
-    Some(
-        match std::env::var("XDG_CONFIG_HOME") {
-            Ok(home) => PathBuf::from(home),
-            Err(e) => {
-                error!(
-                    "Failed go get XDG_CONFIG_HOME ({}). Falling back to $HOME/.config.",
-                    e.to_string()
-                );
-                if let Ok(p) = std::env::var("HOME") {
-                    PathBuf::from(p).join(".config")
-                } else {
+    #[cfg(debug_assertions)]
+    return Some(PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("config.json"));
+    #[cfg(not(debug_assertions))]
+    {
+        let name = env!("CARGO_PKG_NAME");
+        Some(
+            match std::env::var("XDG_CONFIG_HOME") {
+                Ok(home) => PathBuf::from(home),
+                Err(e) => {
                     error!(
-                        "Failed go get HOME ({}). Using default config.",
+                        "Failed go get XDG_CONFIG_HOME ({}). Falling back to $HOME/.config.",
                         e.to_string()
                     );
-                    return None;
+                    if let Ok(p) = std::env::var("HOME") {
+                        PathBuf::from(p).join(".config")
+                    } else {
+                        error!(
+                            "Failed go get HOME ({}). Using default config.",
+                            e.to_string()
+                        );
+                        return None;
+                    }
                 }
             }
-        }
-        .join(format!("{name}/config.json")),
-    )
+            .join(format!("{name}/config.json")),
+        )
+    }
 }
 
 /// Reads config from a specified directory, or from the defautl path
