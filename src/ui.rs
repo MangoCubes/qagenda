@@ -20,15 +20,28 @@ use crate::{config::Config, state::State};
 #[serde(rename_all = "lowercase")]
 pub enum Tab {
     /// Displays tasks only. Has a section below that contains all completed tasks.
-    Tasks { past: bool },
+    Tasks {
+        past: bool,
+        /// If set to None, display all events
+        /// If set to a value, then display all events from that calendar only
+        cal: Option<String>,
+    },
     /// Displays tasks and events. Tasks are displayed only if [`show_tasks`] is true and the due
     /// date is the curretly displayed date.
-    Events { show_tasks: bool },
+    Events {
+        show_tasks: bool,
+        /// If set to None, display all events
+        /// If set to a value, then display all events from that calendar only
+        cal: Option<String>,
+    },
 }
 
 impl Default for Tab {
     fn default() -> Self {
-        Self::Events { show_tasks: false }
+        Self::Events {
+            show_tasks: false,
+            cal: None,
+        }
     }
 }
 
