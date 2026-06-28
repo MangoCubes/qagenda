@@ -14,7 +14,10 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Config, state::State};
+use crate::{
+    config::{Config, keybinds::Action},
+    state::State,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -146,48 +149,56 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     let state2 = state.clone();
     let ui_state2 = ui_state.clone();
     let title2 = title.clone();
+    let keybinds = config.keybinds.clone();
 
-    ckey.connect_key_pressed(move |_, keyval, _, _| {
-        if keyval == Key::Escape {
-            window2.set_visible(false);
-            window2.set_sensitive(false);
-            app2.quit();
-            Propagation::Stop
-        } else if keyval == Key::Right || keyval == Key::Left {
-            let state = state2.lock().unwrap();
-            let cal_names = state.calendar_names();
-            let mut ui = ui_state2.lock().unwrap();
-            let new_cal = {
-                match ui.selected_cal() {
-                    Some(cal) => match cal_names.iter().position(|c| *c == cal) {
-                        Some(idx) => {
-                            if keyval == Key::Right {
-                                if idx + 1 >= cal_names.len() {
-                                    None
-                                } else {
-                                    Some(cal_names[idx + 1].clone())
+    ckey.connect_key_pressed(move |_, keyval, _, state| {
+        if let Some(action) = keybinds.get(&keyval, state) {
+            match action {
+                Action::Right | Action::Left => {
+                    let state = state2.lock().unwrap();
+                    let cal_names = state.calendar_names();
+                    let mut ui = ui_state2.lock().unwrap();
+                    let new_cal = {
+                        match ui.selected_cal() {
+                            Some(cal) => match cal_names.iter().position(|c| *c == cal) {
+                                Some(idx) => {
+                                    if *action == Action::Right {
+                                        if idx + 1 >= cal_names.len() {
+                                            None
+                                        } else {
+                                            Some(cal_names[idx + 1].clone())
+                                        }
+                                    } else {
+                                        if idx <= 0 {
+                                            None
+                                        } else {
+                                            Some(cal_names[idx - 1].clone())
+                                        }
+                                    }
                                 }
-                            } else {
-                                if idx <= 0 {
-                                    None
+                                None => None,
+                            },
+                            None => {
+                                if *action == Action::Right {
+                                    Some(cal_names.first().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
                                 } else {
-                                    Some(cal_names[idx - 1].clone())
+                                    Some(cal_names.last().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
                                 }
                             }
                         }
-                        None => None,
-                    },
-                    None => {
-                        if keyval == Key::Right {
-                            Some(cal_names.first().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
-                        } else {
-                            Some(cal_names.last().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
-                        }
-                    }
+                    };
+                    update_view(&title2, new_cal.as_deref());
+                    ui.set_selected_cal(new_cal);
+                    Propagation::Stop
                 }
-            };
-            update_view(&title2, new_cal.as_deref());
-            ui.set_selected_cal(new_cal);
+                _ => {
+                    Propagation::Proceed
+                },
+            }
+        } else if keyval == Key::Escape {
+            window2.set_visible(false);
+            window2.set_sensitive(false);
+            app2.quit();
             Propagation::Stop
         } else {
             Propagation::Proceed

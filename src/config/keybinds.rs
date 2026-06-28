@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use gtk4::gdk::Key;
+use gtk4::gdk::{Key, ModifierType};
 use serde::{Deserialize, Serialize, Serializer};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -14,8 +14,27 @@ pub enum Action {
     SectionDown,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct KeyBinds(HashMap<Key, Action>);
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyBinds(HashMap<(Key, ModifierType), Action>);
+
+impl Default for KeyBinds {
+    fn default() -> Self {
+        Self(HashMap::from([
+            ((Key::Up, ModifierType::empty()), Action::Up),
+            ((Key::Down, ModifierType::empty()), Action::Down),
+            ((Key::Left, ModifierType::empty()), Action::Left),
+            ((Key::Right, ModifierType::empty()), Action::Right),
+            ((Key::Up, ModifierType::CONTROL_MASK), Action::SectionUp),
+            ((Key::Down, ModifierType::CONTROL_MASK), Action::SectionDown),
+        ]))
+    }
+}
+
+impl KeyBinds {
+    pub fn get(&self, key: &Key, mods: ModifierType) -> Option<&Action> {
+        self.0.get(&(*key, mods))
+    }
+}
 
 impl Serialize for KeyBinds {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -24,7 +43,7 @@ impl Serialize for KeyBinds {
     {
         self.0
             .iter()
-            .map(|(k, v)| (k.to_string(), v))
+            .map(|((k, m), v)| (gtk4::accelerator_name(*k, *m).to_string(), v))
             .collect::<HashMap<String, &Action>>()
             .serialize(serializer)
     }
@@ -38,10 +57,10 @@ impl<'de> Deserialize<'de> for KeyBinds {
         let keybinds = HashMap::<String, Action>::deserialize(deserializer)?
             .into_iter()
             .filter_map(|(k, v)| {
-                if let Some(key) = Key::from_name(&k) {
-                    Some((key, v))
+                if let Some((key, mods)) = gtk4::accelerator_parse(&k) {
+                    Some(((key, mods), v))
                 } else {
-                    eprintln!("Unknown key {} found; Skipping.", k);
+                    eprintln!("Failed to parse key \"{}\"; Skipping.", k);
                     None
                 }
             })
