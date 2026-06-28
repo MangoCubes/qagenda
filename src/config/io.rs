@@ -72,6 +72,9 @@ pub fn load_config(config_path: Option<&Path>) -> Config {
                     println!("Config file does not exist. Using default config.");
                     println!("You can generate a new config file using the following command:");
                     println!("{name} config");
+                    println!(
+                        "Optionally add a flag --config <Path> to specify the location in which the config file will be created."
+                    );
                     Config::default()
                 }
             }

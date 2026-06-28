@@ -3,7 +3,7 @@ mod logging;
 mod state;
 mod ui;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, process};
 
 use clap::Parser;
 use gtk4::{
@@ -11,10 +11,17 @@ use gtk4::{
     gio::prelude::{ApplicationExt, ApplicationExtManual},
 };
 
-use crate::{config::io::load_config, state::State, ui::build_ui};
+use crate::{
+    config::{
+        Config,
+        io::{load_config, write_config},
+    },
+    state::State,
+    ui::build_ui,
+};
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about)]
 struct Args {
     #[arg(short, long)]
     verbose: bool,
@@ -25,12 +32,20 @@ struct Args {
     /// Path to config file
     #[arg(short, long)]
     config: Option<PathBuf>,
+
+    command: Option<String>,
 }
 
 fn main() {
     let args = Args::parse();
     if args.verbose {
         logging::set_verbose(true);
+    }
+
+    if args.command.as_deref() == Some("config") {
+        gtk4::init().expect("Failed to get GTK working.");
+        write_config(args.config.as_deref(), Config::default());
+        process::exit(0);
     }
 
     let app = Application::builder()

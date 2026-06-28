@@ -191,15 +191,16 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
                     ui.set_selected_cal(new_cal);
                     Propagation::Stop
                 }
+                Action::Exit => {
+                    window2.set_visible(false);
+                    window2.set_sensitive(false);
+                    app2.quit();
+                    Propagation::Stop
+                },
                 _ => {
                     Propagation::Proceed
                 },
             }
-        } else if keyval == Key::Escape {
-            window2.set_visible(false);
-            window2.set_sensitive(false);
-            app2.quit();
-            Propagation::Stop
         } else {
             Propagation::Proceed
         }
