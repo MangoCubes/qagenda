@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use icalendar::{Calendar, CalendarComponent, Component};
+use icalendar::Calendar;
 
 use crate::debug;
 
@@ -64,6 +64,13 @@ impl State {
             })
             .collect();
 
+        if cals.len() == 0 {
+            panic!(
+                "No calendars discovered. There needs to be at least one directory inside {:?} that contains calendar items (.ics).",
+                dir
+            );
+        }
+
         debug!("Discovered {} calendars.", cals.len());
         cals.iter()
             .for_each(|c| debug!("Calendar {:?} found in path {:?}", c.file_name(), c.path()));
@@ -79,15 +86,7 @@ impl State {
         Self { cal, readonly }
     }
 
-    pub fn get_agenda(&self) -> Vec<String> {
-        self.cal
-            .values()
-            .flat_map(|c| &c.components)
-            .filter_map(|comp| match comp {
-                CalendarComponent::Event(e) => e.get_summary().map(|s| s.to_string()),
-                CalendarComponent::Todo(t) => t.get_summary().map(|s| s.to_string()),
-                _ => None,
-            })
-            .collect()
+    pub fn calendar_names(&self) -> Vec<String> {
+        self.cal.keys().cloned().collect()
     }
 }

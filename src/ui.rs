@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::Local;
 use gtk4::prelude::BoxExt;
+use gtk4::{Align, Box, Separator};
 use gtk4::{
     Application, ApplicationWindow, CssProvider, EventControllerKey, Label, Orientation,
     gdk::{Display, Key},
@@ -9,7 +10,6 @@ use gtk4::{
     glib::Propagation,
     prelude::*,
 };
-use gtk4::{Box, PolicyType, ScrolledWindow, Separator};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 use serde::{Deserialize, Serialize};
@@ -70,7 +70,23 @@ pub struct UIState {
     pub focus: Focus,
 }
 
-pub fn build_ui(app: &Application, config: Config, state: State) {
+impl UIState {
+    pub fn selected_cal(&self) -> Option<String> {
+        match &self.tab {
+            Tab::Tasks { cal, .. } => cal.clone(),
+            Tab::Events { cal, .. } => cal.clone(),
+        }
+    }
+
+    pub fn set_selected_cal(&mut self, cal: Option<String>) {
+        match &mut self.tab {
+            Tab::Tasks { cal: c, .. } => *c = cal,
+            Tab::Events { cal: c, .. } => *c = cal,
+        }
+    }
+}
+
+pub fn build_ui(app: &Application, config: Config, s: State) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("QCal")
@@ -95,24 +111,7 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-    let key_controller = EventControllerKey::new();
-    let a = app.clone();
-    let w = window.clone();
-
-    key_controller.connect_key_pressed(move |_, keyval, _, _| {
-        if keyval == Key::Escape {
-            w.set_visible(false);
-            w.set_sensitive(false);
-            a.quit();
-            Propagation::Stop
-        } else {
-            Propagation::Proceed
-        }
-    });
-
-    window.add_controller(key_controller);
-
-    let items = Arc::new(Mutex::new(state.clone()));
+    let state = Arc::new(Mutex::new(s.clone()));
     let ui_state = Arc::new(Mutex::new(config.init_state.clone()));
 
     let now = Local::now().format("%Y/%m/%d").to_string();
@@ -128,19 +127,83 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let divider = Separator::builder().build();
     vbox.append(&divider);
 
-    let title = Label::new(Some("Agenda"));
-    title.set_halign(gtk4::Align::Start);
+    let title = Label::new(None);
+    title.set_halign(Align::Start);
     title.add_css_class("section-title");
     vbox.append(&title);
 
     let agenda = Box::new(Orientation::Vertical, 4);
-    for summary in state.get_agenda() {
-        let label = Label::new(Some(&summary));
-        label.set_halign(gtk4::Align::Start);
-        label.add_css_class("agenda-item");
-        agenda.append(&label);
+    vbox.append(&agenda);
+
+    {
+        let ui = ui_state.lock().unwrap();
+        update_view(&title, ui.selected_cal().as_deref());
     }
+
+    let ckey = EventControllerKey::new();
+    let app2 = app.clone();
+    let window2 = window.clone();
+    let state2 = state.clone();
+    let ui_state2 = ui_state.clone();
+    let title2 = title.clone();
+
+    ckey.connect_key_pressed(move |_, keyval, _, _| {
+        if keyval == Key::Escape {
+            window2.set_visible(false);
+            window2.set_sensitive(false);
+            app2.quit();
+            Propagation::Stop
+        } else if keyval == Key::Right || keyval == Key::Left {
+            let state = state2.lock().unwrap();
+            let cal_names = state.calendar_names();
+            let mut ui = ui_state2.lock().unwrap();
+            let new_cal = {
+                match ui.selected_cal() {
+                    Some(cal) => match cal_names.iter().position(|c| *c == cal) {
+                        Some(idx) => {
+                            if keyval == Key::Right {
+                                if idx + 1 >= cal_names.len() {
+                                    None
+                                } else {
+                                    Some(cal_names[idx + 1].clone())
+                                }
+                            } else {
+                                if idx <= 0 {
+                                    None
+                                } else {
+                                    Some(cal_names[idx - 1].clone())
+                                }
+                            }
+                        }
+                        None => None,
+                    },
+                    None => {
+                        if keyval == Key::Right {
+                            Some(cal_names.first().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
+                        } else {
+                            Some(cal_names.last().expect("No calendars found. Which is really weird because this program should not start if there are no calendars.").clone())
+                        }
+                    }
+                }
+            };
+            update_view(&title2, new_cal.as_deref());
+            ui.set_selected_cal(new_cal);
+            Propagation::Stop
+        } else {
+            Propagation::Proceed
+        }
+    });
+
+    window.add_controller(ckey);
 
     window.set_child(Some(&vbox));
     window.present();
+}
+
+fn update_view(title: &Label, cal: Option<&str>) {
+    let title_text = match cal {
+        Some(name) => format!("Agenda - {}", name),
+        None => "Agenda (All calendars)".to_string(),
+    };
+    title.set_text(&title_text);
 }
