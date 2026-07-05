@@ -12,6 +12,8 @@ pub enum Action {
     Right,
     SectionUp,
     SectionDown,
+    SectionLeft,
+    SectionRight,
     Exit,
 }
 
@@ -27,6 +29,11 @@ impl Default for KeyBinds {
             ((Key::Right, ModifierType::empty()), Action::Right),
             ((Key::Up, ModifierType::CONTROL_MASK), Action::SectionUp),
             ((Key::Down, ModifierType::CONTROL_MASK), Action::SectionDown),
+            ((Key::Left, ModifierType::CONTROL_MASK), Action::SectionLeft),
+            (
+                (Key::Right, ModifierType::CONTROL_MASK),
+                Action::SectionRight,
+            ),
             ((Key::Escape, ModifierType::empty()), Action::Exit),
         ]))
     }

@@ -1,3 +1,7 @@
+pub mod event;
+pub mod task;
+pub mod utils;
+
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
@@ -7,7 +11,10 @@ use std::{
 
 use icalendar::Calendar;
 
-use crate::debug;
+use crate::{
+    debug,
+    state::{event::EventItem, task::TaskItem},
+};
 
 #[derive(Clone)]
 pub struct State {
@@ -88,5 +95,37 @@ impl State {
 
     pub fn calendar_names(&self) -> Vec<String> {
         self.cal.keys().cloned().collect()
+    }
+
+    pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
+        let cals: Vec<&Calendar> = match cal {
+            Some(name) => self.cal.get(name).into_iter().collect(),
+            None => self.cal.values().collect(),
+        };
+
+        cals.iter()
+            .map(|c| {
+                c.events()
+                    .map(|e| EventItem::new(e))
+                    .collect::<Vec<EventItem>>()
+            })
+            .flatten()
+            .collect()
+    }
+
+    pub fn get_tasks(&self, cal_filter: Option<&str>) -> Vec<TaskItem> {
+        let cals: Vec<&Calendar> = match cal_filter {
+            Some(name) => self.cal.get(name).into_iter().collect(),
+            None => self.cal.values().collect(),
+        };
+
+        cals.iter()
+            .map(|c| {
+                c.todos()
+                    .map(|e| TaskItem::new(e))
+                    .collect::<Vec<TaskItem>>()
+            })
+            .flatten()
+            .collect()
     }
 }

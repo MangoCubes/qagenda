@@ -5,10 +5,7 @@ use gtk4::prelude::BoxExt;
 use gtk4::{Align, Box, Separator};
 use gtk4::{
     Application, ApplicationWindow, CssProvider, EventControllerKey, Label, Orientation,
-    gdk::{Display, Key},
-    gio::prelude::ApplicationExt,
-    glib::Propagation,
-    prelude::*,
+    gdk::Display, gio::prelude::ApplicationExt, glib::Propagation, prelude::*,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
@@ -140,7 +137,8 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
 
     {
         let ui = ui_state.lock().unwrap();
-        update_view(&title, ui.selected_cal().as_deref());
+        let st = state.lock().unwrap();
+        update_view(&agenda, &title, &ui, &st);
     }
 
     let ckey = EventControllerKey::new();
@@ -149,6 +147,7 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     let state2 = state.clone();
     let ui_state2 = ui_state.clone();
     let title2 = title.clone();
+    let agenda2 = agenda.clone();
     let keybinds = config.keybinds.clone();
 
     ckey.connect_key_pressed(move |_, keyval, _, state| {
@@ -187,8 +186,23 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
                             }
                         }
                     };
-                    update_view(&title2, new_cal.as_deref());
                     ui.set_selected_cal(new_cal);
+                    update_view(&agenda2, &title2, &ui, &state);
+                    Propagation::Stop
+                }
+                Action::SectionLeft | Action::SectionRight => {
+                    let state = state2.lock().unwrap();
+                    let mut ui = ui_state2.lock().unwrap();
+                    let cal = ui.selected_cal();
+                    match &ui.tab {
+                        Tab::Events { .. } => {
+                            ui.tab = Tab::Tasks { past: true, cal };
+                        }
+                        Tab::Tasks { .. } => {
+                            ui.tab = Tab::Events { show_tasks: false, cal };
+                        }
+                    }
+                    update_view(&agenda2, &title2, &ui, &state);
                     Propagation::Stop
                 }
                 Action::Exit => {
@@ -212,10 +226,71 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     window.present();
 }
 
-fn update_view(title: &Label, cal: Option<&str>) {
-    let title_text = match cal {
-        Some(name) => format!("Agenda - {}", name),
-        None => "Agenda (All calendars)".to_string(),
+fn update_view(agenda: &Box, title: &Label, ui: &UIState, state: &State) {
+    let tab_name = match ui.tab {
+        Tab::Events { .. } => "Events",
+        Tab::Tasks { .. } => "Tasks",
+    };
+    let title_text = match ui.selected_cal().as_deref() {
+        Some(name) => format!("Agenda ({}) - {}", tab_name, name),
+        None => format!("Agenda ({}) (All calendars)", tab_name),
     };
     title.set_text(&title_text);
+
+    while let Some(child) = agenda.first_child() {
+        agenda.remove(&child);
+    }
+
+    match &ui.tab {
+        Tab::Events { cal, .. } => {
+            let events = state.get_events(cal.as_deref());
+            if events.is_empty() {
+                let label = Label::new(Some("No events"));
+                label.set_halign(Align::Start);
+                agenda.append(&label);
+            } else {
+                events.iter().for_each(|e| {
+                    let item_box = Box::new(Orientation::Horizontal, 8);
+                    item_box.add_css_class("agenda-event-item");
+
+                    let summary = Label::new(Some(&e.summary));
+                    summary.set_halign(Align::Start);
+                    summary.set_hexpand(true);
+
+                    let duration = Label::new(Some(&e.duration));
+                    duration.set_halign(Align::End);
+
+                    item_box.append(&summary);
+                    item_box.append(&duration);
+
+                    agenda.append(&item_box);
+                })
+            }
+        }
+        Tab::Tasks { cal, past: _ } => {
+            let tasks = state.get_tasks(cal.as_deref());
+            if tasks.is_empty() {
+                let label = Label::new(Some("No tasks"));
+                label.set_halign(Align::Start);
+                agenda.append(&label);
+            } else {
+                tasks.iter().for_each(|t| {
+                    let item_box = Box::new(Orientation::Horizontal, 8);
+                    item_box.add_css_class("agenda-task-item");
+
+                    let summary = Label::new(Some(&t.summary));
+                    summary.set_halign(Align::Start);
+                    summary.set_hexpand(true);
+
+                    let due = Label::new(Some(&t.due));
+                    due.set_halign(Align::End);
+
+                    item_box.append(&summary);
+                    item_box.append(&due);
+
+                    agenda.append(&item_box);
+                });
+            }
+        }
+    }
 }
