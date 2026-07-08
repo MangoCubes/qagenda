@@ -1,5 +1,5 @@
-use chrono::{Datelike, Local, NaiveDate};
-use icalendar::{CalendarDateTime, DatePerhapsTime};
+use chrono::{Datelike, Local, NaiveDate, NaiveDateTime};
+use icalendar::{CalendarDateTime, Component, DatePerhapsTime, Event};
 
 pub fn format_date_perhaps_time(dpt: &DatePerhapsTime) -> String {
     let year = match dpt {
@@ -44,5 +44,30 @@ pub fn get_naive_date(cdt: &CalendarDateTime) -> NaiveDate {
         CalendarDateTime::Floating(ndt) => ndt.date(),
         CalendarDateTime::Utc(utc) => utc.date_naive(),
         CalendarDateTime::WithTimezone { date_time, .. } => date_time.date(),
+    }
+}
+
+pub fn get_naive_datetime(cdt: &CalendarDateTime) -> NaiveDateTime {
+    match cdt {
+        CalendarDateTime::Floating(ndt) => *ndt,
+        CalendarDateTime::Utc(utc) => utc.naive_utc(),
+        CalendarDateTime::WithTimezone { date_time, .. } => *date_time,
+    }
+}
+
+pub fn is_past_event(event: &Event) -> bool {
+    let today = Local::now().date_naive();
+    match event.get_end() {
+        Some(DatePerhapsTime::Date(end)) => {
+            match event.get_start() {
+                // If start and end are the same, that means the event lasts for that whole day.
+                // For such event to be considered to be in the past, its end date needs to be
+                // strictly in the past.
+                Some(DatePerhapsTime::Date(start)) if start == end => end < today,
+                _ => end <= today,
+            }
+        }
+        Some(DatePerhapsTime::DateTime(end_dt)) => get_naive_date(&end_dt) < today,
+        None => false,
     }
 }

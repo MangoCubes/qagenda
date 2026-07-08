@@ -9,16 +9,145 @@ use std::{
     str::FromStr,
 };
 
-use icalendar::Calendar;
+use chrono::{Local, NaiveTime, TimeDelta, TimeZone};
+use icalendar::{Calendar, Component, DatePerhapsTime, EventLike, rrule::Tz};
 
 use crate::{
     debug,
-    state::{event::EventItem, task::TaskItem},
+    state::{
+        event::EventItem,
+        task::TaskItem,
+        utils::{get_naive_datetime, is_past_event},
+    },
 };
 
 #[derive(Clone)]
+pub struct MiniCal {
+    pub events: Vec<EventItem>,
+    pub recurring_events: Vec<EventItem>,
+    /// If the last occurrence of a recurring event is past the current date, it goes here as well
+    pub past_events: Vec<EventItem>,
+    pub tasks: Vec<TaskItem>,
+    pub completed_tasks: Vec<TaskItem>,
+}
+
+impl MiniCal {
+    pub fn from_calendar(cal: &Calendar) -> Self {
+        let today = Local::now().date_naive();
+        let (mut events, mut recurring_events, mut past_events) = (vec![], vec![], vec![]);
+        let start_window = Tz::LOCAL
+            .from_local_datetime(&today.and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap()))
+            .single()
+            .expect("Apparently the local time falls in a fold or a gap in the local time. At least that's what the documentation says. I have no idea what the hell that means. Sorry.");
+
+        cal.events().for_each(|event| {
+            if event.property_value("RRULE").is_some() {
+                match event.get_recurrence() {
+                    Ok(rrule) => {
+                        let result = rrule.after(start_window).all(3);
+                        if result.dates.is_empty() {
+                            // All occurrences are in the past
+                            past_events.push(EventItem::from(event));
+                        } else {
+                            let summary =
+                                event.get_summary().unwrap_or("Untitled Event").to_string();
+                            let items = match event.get_end() {
+                                Some(end) => {
+                                    let Some(start) = event.get_start() else {
+                                        if is_past_event(event) {
+                                            past_events.push(EventItem::from(event));
+                                        } else {
+                                            events.push(EventItem::from(event));
+                                        };
+                                        return;
+                                    };
+                                    let duration = {
+                                        match (start, end) {
+                                            (
+                                                DatePerhapsTime::Date(s),
+                                                DatePerhapsTime::Date(e),
+                                            ) => e - s,
+                                            (
+                                                DatePerhapsTime::DateTime(s),
+                                                DatePerhapsTime::DateTime(e),
+                                            ) => get_naive_datetime(&e) - get_naive_datetime(&s),
+                                            _ => TimeDelta::zero(),
+                                        }
+                                    };
+                                    result
+                                        .dates
+                                        .iter()
+                                        .map(|start| {
+                                            let s = start.naive_local();
+                                            EventItem::new(
+                                                summary.clone(),
+                                                Some(s.into()),
+                                                Some((s + duration).into()),
+                                            )
+                                        })
+                                        .collect::<Vec<EventItem>>()
+                                }
+                                None => {
+                                    // No end date? Huh
+                                    result
+                                        .dates
+                                        .iter()
+                                        .map(|start| {
+                                            EventItem::new(
+                                                summary.clone(),
+                                                Some(start.naive_local().into()),
+                                                None,
+                                            )
+                                        })
+                                        .collect::<Vec<EventItem>>()
+                                }
+                            };
+                            recurring_events.extend(items);
+                        }
+                    }
+                    Err(e) => {
+                        // Treat it as single-off event
+                        eprintln!(
+                            "Failed to parse recurrence for event {:?}: {}",
+                            event.get_summary(),
+                            e
+                        );
+                        if !is_past_event(event) {
+                            events.push(EventItem::from(event));
+                        } else {
+                            past_events.push(EventItem::from(event));
+                        }
+                    }
+                }
+            } else if is_past_event(event) {
+                past_events.push(EventItem::from(event));
+            } else {
+                events.push(EventItem::from(event));
+            }
+        });
+
+        let (completed_tasks, tasks) = cal.todos().map(TaskItem::new).partition(|t| t.completed);
+
+        Self {
+            events,
+            recurring_events,
+            past_events,
+            tasks,
+            completed_tasks,
+        }
+    }
+
+    pub fn active_events(&self) -> Vec<EventItem> {
+        self.events.iter().chain(&self.recurring_events).cloned().collect()
+    }
+    pub fn tasks(&self) -> Vec<TaskItem> {
+        self.tasks.clone()
+    }
+}
+
+#[derive(Clone)]
 pub struct State {
-    cal: HashMap<String, Calendar>,
+    cal: HashMap<String, MiniCal>,
     readonly: bool,
 }
 
@@ -29,7 +158,7 @@ pub enum FailReason {
 
 impl State {
     pub fn new(dir: PathBuf, readonly: bool) -> Self {
-        fn load_calendar(path: PathBuf) -> Calendar {
+        fn load_calendar(path: PathBuf) -> MiniCal {
             let mut cal = Calendar::new();
 
             if let Ok(entries) = fs::read_dir(&path) {
@@ -50,7 +179,7 @@ impl State {
                 eprintln!("Failed to list files in {:?}", path);
             }
             debug!("Loaded {} components from {:?}", cal.components.len(), path);
-            cal
+            MiniCal::from_calendar(&cal)
         }
 
         let cals: Vec<DirEntry> = fs::read_dir(&dir)
@@ -82,7 +211,7 @@ impl State {
         cals.iter()
             .for_each(|c| debug!("Calendar {:?} found in path {:?}", c.file_name(), c.path()));
 
-        let cal: HashMap<String, Calendar> = cals
+        let cal: HashMap<String, MiniCal> = cals
             .into_iter()
             .map(|c| {
                 let name = c.file_name().to_string_lossy().to_string();
@@ -98,34 +227,20 @@ impl State {
     }
 
     pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
-        let cals: Vec<&Calendar> = match cal {
+        let cals: Vec<&MiniCal> = match cal {
             Some(name) => self.cal.get(name).into_iter().collect(),
             None => self.cal.values().collect(),
         };
 
-        cals.iter()
-            .map(|c| {
-                c.events()
-                    .map(|e| EventItem::new(e))
-                    .collect::<Vec<EventItem>>()
-            })
-            .flatten()
-            .collect()
+        cals.iter().flat_map(|c| c.active_events()).collect()
     }
 
     pub fn get_tasks(&self, cal_filter: Option<&str>) -> Vec<TaskItem> {
-        let cals: Vec<&Calendar> = match cal_filter {
+        let cals: Vec<&MiniCal> = match cal_filter {
             Some(name) => self.cal.get(name).into_iter().collect(),
             None => self.cal.values().collect(),
         };
 
-        cals.iter()
-            .map(|c| {
-                c.todos()
-                    .map(|e| TaskItem::new(e))
-                    .collect::<Vec<TaskItem>>()
-            })
-            .flatten()
-            .collect()
+        cals.iter().flat_map(|c| c.tasks()).collect()
     }
 }

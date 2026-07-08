@@ -8,11 +8,12 @@ pub struct EventItem {
     pub duration: String,
 }
 impl EventItem {
-    pub fn new(event: &Event) -> Self {
-        let summary = event.get_summary().unwrap_or("Untitled Event").to_string();
-        let start = event.get_start();
-        let end = event.get_end();
-        let duration = match (event.get_start(), event.get_end()) {
+    pub fn new(
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+    ) -> Self {
+        let duration = match (&start, &end) {
             (Some(DatePerhapsTime::Date(s)), Some(DatePerhapsTime::Date(e))) => {
                 format!("{} - {}", s.format("%Y-%m-%d"), e.format("%Y-%m-%d"))
             }
@@ -47,5 +48,12 @@ impl EventItem {
             (None, None) => "No time set".to_string(),
         };
         Self { summary, duration }
+    }
+
+    pub fn from(event: &Event) -> Self {
+        let summary = event.get_summary().unwrap_or("Untitled Event").to_string();
+        let start = event.get_start();
+        let end = event.get_end();
+        Self::new(summary, start, end)
     }
 }
