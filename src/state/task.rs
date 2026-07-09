@@ -3,6 +3,8 @@ use std::cmp::Ordering;
 use chrono::Local;
 use icalendar::{Component, DatePerhapsTime, Todo, TodoStatus};
 
+use chrono::NaiveDateTime;
+
 use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_naive_date};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,8 +55,14 @@ impl PartialOrd for TaskItem {
 
 impl Ord for TaskItem {
     fn cmp(&self, other: &Self) -> Ordering {
-        let self_key = self.due.as_ref().map(dpt_to_naive_datetime);
-        let other_key = other.due.as_ref().map(dpt_to_naive_datetime);
+        let self_key = self
+            .due
+            .as_ref()
+            .map_or(NaiveDateTime::MAX, dpt_to_naive_datetime);
+        let other_key = other
+            .due
+            .as_ref()
+            .map_or(NaiveDateTime::MAX, dpt_to_naive_datetime);
         self_key.cmp(&other_key)
     }
 }
