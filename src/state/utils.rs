@@ -55,6 +55,13 @@ pub fn get_naive_datetime(cdt: &CalendarDateTime) -> NaiveDateTime {
     }
 }
 
+pub fn dpt_to_naive_datetime(dpt: &DatePerhapsTime) -> NaiveDateTime {
+    match dpt {
+        DatePerhapsTime::Date(d) => d.and_hms_opt(0, 0, 0).unwrap(),
+        DatePerhapsTime::DateTime(cdt) => get_naive_datetime(cdt),
+    }
+}
+
 pub fn is_past_event(event: &Event) -> bool {
     let today = Local::now().date_naive();
     match event.get_end() {

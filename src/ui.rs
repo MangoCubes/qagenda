@@ -282,7 +282,7 @@ fn update_view(agenda: &Box, title: &Label, ui: &UIState, state: &State) {
                     summary.set_halign(Align::Start);
                     summary.set_hexpand(true);
 
-                    let due = Label::new(Some(&t.due));
+                    let due = Label::new(Some(&t.duetxt));
                     due.set_halign(Align::End);
 
                     item_box.append(&summary);

@@ -155,17 +155,25 @@ impl MiniCal {
             }
         });
 
-        let (completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) =
+        let (mut completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) =
             cal.todos().map(TaskItem::new).partition(|t| t.completed);
-        let (upcoming_tasks, tasks) = remaining.into_iter().partition(|t| {
-            t.start.as_ref().is_some_and(|s| {
-                let today = Local::now().date_naive();
-                match s {
-                    DatePerhapsTime::Date(d) => *d > today,
-                    DatePerhapsTime::DateTime(cdt) => get_naive_date(cdt) > today,
-                }
-            })
-        });
+        let (mut upcoming_tasks, mut tasks): (Vec<TaskItem>, Vec<TaskItem>) =
+            remaining.into_iter().partition(|t| {
+                t.start.as_ref().is_some_and(|s| {
+                    let today = Local::now().date_naive();
+                    match s {
+                        DatePerhapsTime::Date(d) => *d > today,
+                        DatePerhapsTime::DateTime(cdt) => get_naive_date(cdt) > today,
+                    }
+                })
+            });
+
+        completed_tasks.sort();
+        upcoming_tasks.sort();
+        tasks.sort();
+        events.sort();
+        recurring_events.sort();
+        past_events.sort();
 
         Self {
             events,
@@ -184,6 +192,7 @@ impl MiniCal {
             .cloned()
             .collect()
     }
+
     pub fn tasks(&self) -> Vec<TaskItem> {
         self.tasks.clone()
     }
@@ -282,20 +291,37 @@ impl State {
     }
 
     pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
-        let cals: Vec<&MiniCal> = match cal {
-            Some(name) => self.cal.get(name).into_iter().collect(),
-            None => self.cal.values().collect(),
+        let get_all = || {
+            let mut events: Vec<EventItem> =
+                self.cal.values().flat_map(|c| c.active_events()).collect();
+            events.sort();
+            events
         };
-
-        cals.iter().flat_map(|c| c.active_events()).collect()
+        if let Some(name) = cal {
+            if let Some(cal) = self.cal.get(name) {
+                cal.active_events()
+            } else {
+                get_all()
+            }
+        } else {
+            get_all()
+        }
     }
 
-    pub fn get_tasks(&self, cal_filter: Option<&str>) -> Vec<TaskItem> {
-        let cals: Vec<&MiniCal> = match cal_filter {
-            Some(name) => self.cal.get(name).into_iter().collect(),
-            None => self.cal.values().collect(),
+    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
+        let get_all = || {
+            let mut tasks: Vec<TaskItem> = self.cal.values().flat_map(|c| c.tasks()).collect();
+            tasks.sort();
+            tasks
         };
-
-        cals.iter().flat_map(|c| c.tasks()).collect()
+        if let Some(name) = cal {
+            if let Some(cal) = self.cal.get(name) {
+                cal.tasks()
+            } else {
+                get_all()
+            }
+        } else {
+            get_all()
+        }
     }
 }
