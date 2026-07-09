@@ -1,5 +1,5 @@
 [package]
-name = "qcal"
+name = "qagenda"
 version = "0.1.0"
 edition = "2024"
 

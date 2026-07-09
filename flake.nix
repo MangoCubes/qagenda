@@ -48,8 +48,8 @@
         packages.default = pkgs.rustPlatform.buildRustPackage {
           inherit buildInputs nativeBuildInputs;
           src = ./.;
-          name = "qcal";
-          cargoHash = "sha256-D8tnWSvCYwUebxTnKPodUARK0flCylQW0c8t8OLGlFM=";
+          name = "qagenda";
+          cargoHash = "sha256-z7tnQOBa6XcUfoTCEZibclJvyX3Cki71o4/Ys29d2vk=";
         };
 
         devShells.default = pkgs.mkShell {
