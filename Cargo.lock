@@ -842,7 +842,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "qcal"
+name = "qagenda"
 version = "0.1.0"
 dependencies = [
  "chrono",

@@ -7,11 +7,11 @@
 }:
 {
   options = {
-    programs.qcal = {
+    programs.qagenda = {
       enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Enable qcal, a quick calendar overlay";
+        description = "Enable qagenda, a quick tasks/events overlay";
       };
       settings = lib.mkOption {
         type = lib.types.attrs;
@@ -22,16 +22,16 @@
   };
   config =
     let
-      cfg = config.programs.qcal;
+      cfg = config.programs.qagenda;
     in
     lib.mkIf cfg.enable {
       # Install package
       home.packages = [
-        inputs.qcal.packages."${pkgs.stdenv.hostPlatform.system}".default
+        inputs.qagenda.packages."${pkgs.stdenv.hostPlatform.system}".default
       ];
       xdg = {
         # Create config.json
-        configFile."qcal/config.json".text = (builtins.toJSON (cfg.settings));
+        configFile."qagenda/config.json".text = (builtins.toJSON (cfg.settings));
       };
     };
 }

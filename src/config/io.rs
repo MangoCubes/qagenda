@@ -35,7 +35,7 @@ fn get_default_config_path() -> Option<PathBuf> {
 }
 
 /// Reads config from a specified directory, or from the defautl path
-/// (~/.config/qcal/config.json)
+/// (~/.config/qagenda/config.json)
 /// Returns Config object in the following scenario:
 /// 1. The [`config_path`] has been specified, and the config is valid
 /// 2. The [`config_path`] has not been specified, and the config is either valid, or simply does

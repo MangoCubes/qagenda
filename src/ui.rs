@@ -89,7 +89,7 @@ impl UIState {
 pub fn build_ui(app: &Application, config: Config, s: State) {
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("QCal")
+        .title(env!("CARGO_PKG_NAME"))
         .build();
 
     window.init_layer_shell();
