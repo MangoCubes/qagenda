@@ -14,9 +14,6 @@ impl EventItem {
         end: Option<DatePerhapsTime>,
     ) -> Self {
         let duration = match (&start, &end) {
-            (Some(DatePerhapsTime::Date(s)), Some(DatePerhapsTime::Date(e))) => {
-                format!("{} - {}", s.format("%Y-%m-%d"), e.format("%Y-%m-%d"))
-            }
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
                 if get_naive_date(&s) == get_naive_date(&e) {
                     // Same day, different end time
@@ -43,7 +40,7 @@ impl EventItem {
                     format!("{} - {}", s_str, e_str)
                 }
             }
-            (Some(s), None) => format_date_perhaps_time(&s),
+            (Some(s), None) => format!("Since {}", format_date_perhaps_time(&s)),
             (None, Some(e)) => format!("Until {}", format_date_perhaps_time(&e)),
             (None, None) => "No time set".to_string(),
         };
