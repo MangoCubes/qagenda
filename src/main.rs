@@ -54,7 +54,13 @@ fn main() {
 
     app.connect_activate(move |app| {
         let config = load_config(args.config.as_deref());
-        let state = State::new(config.dir.clone(), args.readonly);
+        config.validate();
+        let state = State::new(
+            config.dir.clone(),
+            args.readonly,
+            config.max_recurrence_count,
+            config.max_recurrence_date,
+        );
         debug!("Using directory: {:?}", config.dir);
 
         build_ui(app, config, state);

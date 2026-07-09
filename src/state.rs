@@ -9,7 +9,7 @@ use std::{
     str::FromStr,
 };
 
-use chrono::{Local, NaiveTime, TimeDelta, TimeZone};
+use chrono::{Days, Local, NaiveTime, TimeDelta, TimeZone};
 use icalendar::{Calendar, Component, DatePerhapsTime, EventLike, rrule::Tz};
 
 use crate::{
@@ -32,7 +32,11 @@ pub struct MiniCal {
 }
 
 impl MiniCal {
-    pub fn from_calendar(cal: &Calendar) -> Self {
+    pub fn from_calendar(
+        cal: &Calendar,
+        max_recurrence_count: u32,
+        max_recurrence_date: u32,
+    ) -> Self {
         let today = Local::now().date_naive();
         let (mut events, mut recurring_events, mut past_events) = (vec![], vec![], vec![]);
         let start_window = Tz::LOCAL
@@ -40,11 +44,34 @@ impl MiniCal {
             .single()
             .expect("Apparently the local time falls in a fold or a gap in the local time. At least that's what the documentation says. I have no idea what the hell that means. Sorry.");
 
+        let end_window = if max_recurrence_date > 0 {
+            Some(
+                Tz::LOCAL
+                    .from_local_datetime(
+                        &today
+                            .checked_add_days(Days::new((max_recurrence_date + 1) as u64))
+                            .expect("Max recurrence date is too big!")
+                            .and_time(NaiveTime::default()),
+                    )
+                    .single()
+                    .expect("Failed to compute end window for recurrence date limit"),
+            )
+        } else {
+            None
+        };
+
         cal.events().for_each(|event| {
             if event.property_value("RRULE").is_some() {
                 match event.get_recurrence() {
                     Ok(rrule) => {
-                        let result = rrule.after(start_window).all(3);
+                        let result = {
+                            let after = rrule.after(start_window);
+                            let bounded = match end_window {
+                                Some(end) => after.before(end),
+                                None => after,
+                            };
+                            bounded.all(max_recurrence_count as u16)
+                        };
                         if result.dates.is_empty() {
                             // All occurrences are in the past
                             past_events.push(EventItem::from(event));
@@ -138,7 +165,11 @@ impl MiniCal {
     }
 
     pub fn active_events(&self) -> Vec<EventItem> {
-        self.events.iter().chain(&self.recurring_events).cloned().collect()
+        self.events
+            .iter()
+            .chain(&self.recurring_events)
+            .cloned()
+            .collect()
     }
     pub fn tasks(&self) -> Vec<TaskItem> {
         self.tasks.clone()
@@ -157,8 +188,17 @@ pub enum FailReason {
 }
 
 impl State {
-    pub fn new(dir: PathBuf, readonly: bool) -> Self {
-        fn load_calendar(path: PathBuf) -> MiniCal {
+    pub fn new(
+        dir: PathBuf,
+        readonly: bool,
+        max_recurrence_count: u32,
+        max_recurrence_date: u32,
+    ) -> Self {
+        fn load_calendar(
+            path: PathBuf,
+            max_recurrence_count: u32,
+            max_recurrence_date: u32,
+        ) -> MiniCal {
             let mut cal = Calendar::new();
 
             if let Ok(entries) = fs::read_dir(&path) {
@@ -179,7 +219,7 @@ impl State {
                 eprintln!("Failed to list files in {:?}", path);
             }
             debug!("Loaded {} components from {:?}", cal.components.len(), path);
-            MiniCal::from_calendar(&cal)
+            MiniCal::from_calendar(&cal, max_recurrence_count, max_recurrence_date)
         }
 
         let cals: Vec<DirEntry> = fs::read_dir(&dir)
@@ -214,8 +254,10 @@ impl State {
         let cal: HashMap<String, MiniCal> = cals
             .into_iter()
             .map(|c| {
-                let name = c.file_name().to_string_lossy().to_string();
-                (name, load_calendar(c.path()))
+                (
+                    c.file_name().to_string_lossy().to_string(),
+                    load_calendar(c.path(), max_recurrence_count, max_recurrence_date),
+                )
             })
             .collect();
 

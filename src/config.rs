@@ -31,6 +31,14 @@ pub struct Config {
     #[serde(rename = "initState")]
     pub init_state: UIState,
     pub keybinds: KeyBinds,
+    /// Maximum number of recurrences to display for recurring events.
+    /// Defaults to 3. Values below 1 are invalid and will panic.
+    #[serde(rename = "maxRecurrenceCount")]
+    pub max_recurrence_count: u32,
+    /// Maximum number of days into the future for which recurring events should appear.
+    /// Set to 0 to disable this limit (default).
+    #[serde(rename = "maxRecurrenceDate")]
+    pub max_recurrence_date: u32,
 }
 
 impl Default for Config {
@@ -46,11 +54,21 @@ impl Default for Config {
             css: include_str!("./default.css").to_string(),
             init_state: UIState::default(),
             keybinds: KeyBinds::default(),
+            max_recurrence_count: 3,
+            max_recurrence_date: 30,
         }
     }
 }
 
 impl Config {
+    pub fn validate(&self) {
+        assert!(
+            self.max_recurrence_count >= 1,
+            "maxRecurrenceCount must be at least 1, got {}",
+            self.max_recurrence_count
+        );
+    }
+
     pub fn get_edges(&self) -> (bool, bool, bool, bool) {
         let expand = self.expand;
         match self.anchor {
