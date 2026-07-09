@@ -14,7 +14,12 @@
       flake-utils,
       rust-overlay,
     }:
-    flake-utils.lib.eachDefaultSystem (
+    {
+      homeManager = {
+        default = ./nix/homeManager.nix;
+      };
+    }
+    // flake-utils.lib.eachDefaultSystem (
       system:
       let
         overlays = [ (import rust-overlay) ];
