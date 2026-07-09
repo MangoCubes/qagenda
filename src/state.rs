@@ -17,7 +17,7 @@ use crate::{
     state::{
         event::EventItem,
         task::TaskItem,
-        utils::{get_naive_datetime, is_past_event},
+        utils::{get_naive_date, get_naive_datetime, is_past_event},
     },
 };
 
@@ -29,6 +29,8 @@ pub struct MiniCal {
     pub past_events: Vec<EventItem>,
     pub tasks: Vec<TaskItem>,
     pub completed_tasks: Vec<TaskItem>,
+    /// Tasks whose start date is in the future
+    pub upcoming_tasks: Vec<TaskItem>,
 }
 
 impl MiniCal {
@@ -153,7 +155,17 @@ impl MiniCal {
             }
         });
 
-        let (completed_tasks, tasks) = cal.todos().map(TaskItem::new).partition(|t| t.completed);
+        let (completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) =
+            cal.todos().map(TaskItem::new).partition(|t| t.completed);
+        let (upcoming_tasks, tasks) = remaining.into_iter().partition(|t| {
+            t.start.as_ref().is_some_and(|s| {
+                let today = Local::now().date_naive();
+                match s {
+                    DatePerhapsTime::Date(d) => *d > today,
+                    DatePerhapsTime::DateTime(cdt) => get_naive_date(cdt) > today,
+                }
+            })
+        });
 
         Self {
             events,
@@ -161,6 +173,7 @@ impl MiniCal {
             past_events,
             tasks,
             completed_tasks,
+            upcoming_tasks,
         }
     }
 
