@@ -1,3 +1,4 @@
+use std::iter;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Datelike, Days, Local, NaiveDate, TimeDelta};
@@ -135,13 +136,28 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     title.add_css_class("section-title");
     vbox.append(&title);
 
+    let cal_indicator = Box::new(Orientation::Horizontal, 4);
+    cal_indicator.set_halign(Align::Fill);
+    cal_indicator.set_hexpand(true);
+    cal_indicator.set_homogeneous(true);
+
+    vbox.append(&cal_indicator);
+
     let agenda = Box::new(Orientation::Vertical, 4);
     vbox.append(&agenda);
 
     {
         let ui = ui_state.lock().unwrap();
         let st = state.lock().unwrap();
-        update_view(&agenda, &title, &ui, &st);
+        st.calendar_names().iter().for_each(|_| {
+            let box_item = Box::new(Orientation::Horizontal, 0);
+            box_item.set_size_request(-1, -1);
+            box_item.set_halign(Align::Fill);
+            box_item.set_hexpand(true);
+            box_item.add_css_class("cal-indicator");
+            cal_indicator.append(&box_item);
+        });
+        update_view(&agenda, &title, &cal_indicator, &ui, &st);
     }
 
     let ckey = EventControllerKey::new();
@@ -151,6 +167,7 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     let ui_state2 = ui_state.clone();
     let title2 = title.clone();
     let agenda2 = agenda.clone();
+    let cal_indicator2 = cal_indicator.clone();
     let keybinds = config.keybinds.clone();
 
     ckey.connect_key_pressed(move |_, keyval, _, state| {
@@ -190,7 +207,7 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
                         }
                     };
                     ui.set_selected_cal(new_cal);
-                    update_view(&agenda2, &title2, &ui, &state);
+                    update_view(&agenda2, &title2, &cal_indicator2, &ui, &state);
                     Propagation::Stop
                 }
                 Action::SectionLeft | Action::SectionRight => {
@@ -205,7 +222,7 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
                             ui.tab = Tab::Events { show_tasks: false, cal };
                         }
                     }
-                    update_view(&agenda2, &title2, &ui, &state);
+                    update_view(&agenda2, &title2, &cal_indicator2, &ui, &state);
                     Propagation::Stop
                 }
                 Action::Exit => {
@@ -274,7 +291,7 @@ fn build_month_calendar() -> Grid {
     grid
 }
 
-fn update_view(agenda: &Box, title: &Label, ui: &UIState, state: &State) {
+fn update_view(agenda: &Box, title: &Label, cal_indicator: &Box, ui: &UIState, state: &State) {
     let tab_name = match ui.tab {
         Tab::Events { .. } => "Events",
         Tab::Tasks { .. } => "Tasks",
@@ -284,6 +301,25 @@ fn update_view(agenda: &Box, title: &Label, ui: &UIState, state: &State) {
         None => format!("{} (All calendars)", tab_name),
     };
     title.set_text(&title_text);
+
+    let selected = ui.selected_cal();
+    let show_all = selected.is_none();
+
+    if cal_indicator.first_child().is_none() {}
+
+    state
+        .calendar_names()
+        .iter()
+        .zip(iter::successors(cal_indicator.first_child(), |w| {
+            w.next_sibling()
+        }))
+        .for_each(|(name, widget)| {
+            if show_all || selected == Some(name.to_string()) {
+                widget.add_css_class("cal-indicator-active");
+            } else {
+                widget.remove_css_class("cal-indicator-active");
+            }
+        });
 
     while let Some(child) = agenda.first_child() {
         agenda.remove(&child);
