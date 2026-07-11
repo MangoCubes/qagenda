@@ -280,8 +280,8 @@ fn update_view(agenda: &Box, title: &Label, ui: &UIState, state: &State) {
         Tab::Tasks { .. } => "Tasks",
     };
     let title_text = match ui.selected_cal().as_deref() {
-        Some(name) => format!("Agenda ({}) - {}", tab_name, name),
-        None => format!("Agenda ({}) (All calendars)", tab_name),
+        Some(name) => format!("{} - {}", tab_name, name),
+        None => format!("{} (All calendars)", tab_name),
     };
     title.set_text(&title_text);
 

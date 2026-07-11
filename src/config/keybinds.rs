@@ -27,13 +27,10 @@ impl Default for KeyBinds {
             ((Key::Down, ModifierType::empty()), Action::Down),
             ((Key::Left, ModifierType::empty()), Action::Left),
             ((Key::Right, ModifierType::empty()), Action::Right),
-            ((Key::Up, ModifierType::CONTROL_MASK), Action::SectionUp),
-            ((Key::Down, ModifierType::CONTROL_MASK), Action::SectionDown),
-            ((Key::Left, ModifierType::CONTROL_MASK), Action::SectionLeft),
-            (
-                (Key::Right, ModifierType::CONTROL_MASK),
-                Action::SectionRight,
-            ),
+            ((Key::Up, ModifierType::SHIFT_MASK), Action::SectionUp),
+            ((Key::Down, ModifierType::SHIFT_MASK), Action::SectionDown),
+            ((Key::Left, ModifierType::SHIFT_MASK), Action::SectionLeft),
+            ((Key::Right, ModifierType::SHIFT_MASK), Action::SectionRight),
             ((Key::Escape, ModifierType::empty()), Action::Exit),
         ]))
     }
