@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config::keybinds::KeyBinds, ui::UIState};
+use crate::{config::keybinds::KeyBinds, ui::state::UIState};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "lowercase")]
