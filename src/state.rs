@@ -287,7 +287,9 @@ impl State {
     }
 
     pub fn calendar_names(&self) -> Vec<String> {
-        self.cal.keys().cloned().collect()
+        let mut names: Vec<String> = self.cal.keys().cloned().collect();
+        names.sort();
+        names
     }
 
     pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
