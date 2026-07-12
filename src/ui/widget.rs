@@ -18,9 +18,10 @@ use crate::{
 pub struct Widget {
     pub cal_box: Box,
     pub cal_grid: Grid,
+    pub cal_title: Label,
     pub agenda_box: Box,
     pub agenda: Box,
-    pub title: Label,
+    pub agenda_title: Label,
     pub cal_indicator: Box,
     pub ui_state: UIState,
     pub state: State,
@@ -28,9 +29,14 @@ pub struct Widget {
 
 impl Widget {
     pub fn new(ui_state: UIState, state: State) -> Self {
+        let cal_title = Label::new(None);
+        cal_title.set_halign(Align::Center);
+        cal_title.add_css_class("section-title");
+
         let cal_grid = MonthCalendar::build();
-        let cal_box = Box::new(Orientation::Vertical, 0);
+        let cal_box = Box::new(Orientation::Vertical, 4);
         cal_box.add_css_class("section-box");
+        cal_box.append(&cal_title);
         cal_box.append(&cal_grid);
 
         let title = Label::new(None);
@@ -53,9 +59,10 @@ impl Widget {
         let widget = Self {
             cal_box,
             cal_grid,
+            cal_title,
             agenda_box,
             agenda,
-            title,
+            agenda_title: title,
             cal_indicator,
             ui_state,
             state,
@@ -95,15 +102,21 @@ impl Widget {
 
         MonthCalendar::update(&self.cal_grid, self.ui_state.year(), self.ui_state.month());
 
+        self.cal_title.set_text(&format!(
+            "{}/{}",
+            self.ui_state.year(),
+            self.ui_state.month()
+        ));
+
         let tab_name = match self.ui_state.tab() {
             Tab::Events { .. } => "Events",
             Tab::Tasks { .. } => "Tasks",
         };
-        let title_text = match self.ui_state.selected_cal().as_deref() {
+        let agenda_text = match self.ui_state.selected_cal().as_deref() {
             Some(name) => format!("{} - {}", tab_name, name),
             None => format!("{} (All calendars)", tab_name),
         };
-        self.title.set_text(&title_text);
+        self.agenda_title.set_text(&agenda_text);
 
         let selected = self.ui_state.selected_cal();
         let show_all = selected.is_none();
