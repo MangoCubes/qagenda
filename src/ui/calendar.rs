@@ -54,6 +54,7 @@ impl MonthCalendar {
             let row = (i / 7 + 1) as i32; // +1 for header row
 
             let label = Label::new(Some(&date.day().to_string()));
+            label.add_css_class("cal-day");
             if date < first || date >= next {
                 label.add_css_class("cal-other-month");
             }
