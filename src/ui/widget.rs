@@ -1,29 +1,44 @@
-use std::{
-    iter,
-    sync::{Arc, Mutex},
-};
+use std::iter;
 
 use gtk4::{
-    Align, Box, Label, Orientation,
+    Align, Box, Grid, Label, Orientation,
     prelude::{BoxExt, WidgetExt},
 };
 
 use crate::{
+    config::keybinds::Action,
     state::State,
-    ui::state::{Tab, UIState},
+    ui::{
+        calendar::MonthCalendar,
+        state::{Focus, Tab, UIState},
+    },
 };
 
 #[derive(Clone)]
 pub struct Widget {
+    pub cal_box: Box,
+    pub cal_grid: Grid,
+    pub cal_title: Label,
+    pub agenda_box: Box,
     pub agenda: Box,
-    pub title: Label,
+    pub agenda_title: Label,
     pub cal_indicator: Box,
-    pub ui_state: Arc<Mutex<UIState>>,
-    pub state: Arc<Mutex<State>>,
+    pub ui_state: UIState,
+    pub state: State,
 }
 
 impl Widget {
-    pub fn new(ui_state: Arc<Mutex<UIState>>, state: Arc<Mutex<State>>) -> Self {
+    pub fn new(ui_state: UIState, state: State) -> Self {
+        let cal_title = Label::new(None);
+        cal_title.set_halign(Align::Center);
+        cal_title.add_css_class("section-title");
+
+        let cal_grid = MonthCalendar::build();
+        let cal_box = Box::new(Orientation::Vertical, 4);
+        cal_box.add_css_class("section-box");
+        cal_box.append(&cal_title);
+        cal_box.append(&cal_grid);
+
         let title = Label::new(None);
         title.set_halign(Align::Start);
         title.add_css_class("section-title");
@@ -35,9 +50,19 @@ impl Widget {
 
         let agenda = Box::new(Orientation::Vertical, 4);
 
+        let agenda_box = Box::new(Orientation::Vertical, 4);
+        agenda_box.add_css_class("section-box");
+        agenda_box.append(&title);
+        agenda_box.append(&cal_indicator);
+        agenda_box.append(&agenda);
+
         let widget = Self {
+            cal_box,
+            cal_grid,
+            cal_title,
+            agenda_box,
             agenda,
-            title,
+            agenda_title: title,
             cal_indicator,
             ui_state,
             state,
@@ -49,8 +74,7 @@ impl Widget {
     }
 
     fn init_indicators(&self) {
-        let st = self.state.lock().unwrap();
-        st.calendar_names().iter().for_each(|_| {
+        self.state.calendar_names().iter().for_each(|_| {
             let box_item = Box::new(Orientation::Horizontal, 0);
             box_item.set_size_request(-1, -1);
             box_item.set_halign(Align::Fill);
@@ -61,23 +85,43 @@ impl Widget {
     }
 
     pub fn update(&self) {
-        let ui = self.ui_state.lock().unwrap();
-        let state = self.state.lock().unwrap();
+        match self.ui_state.focus() {
+            Focus::Calendar => {
+                self.cal_box.add_css_class("focused-section");
+                self.cal_box.remove_css_class("unfocused-section");
+                self.agenda_box.add_css_class("unfocused-section");
+                self.agenda_box.remove_css_class("focused-section");
+            }
+            Focus::Agenda => {
+                self.agenda_box.add_css_class("focused-section");
+                self.agenda_box.remove_css_class("unfocused-section");
+                self.cal_box.add_css_class("unfocused-section");
+                self.cal_box.remove_css_class("focused-section");
+            }
+        }
 
-        let tab_name = match ui.tab {
+        MonthCalendar::update(&self.cal_grid, self.ui_state.year(), self.ui_state.month());
+
+        self.cal_title.set_text(&format!(
+            "{}/{}",
+            self.ui_state.year(),
+            self.ui_state.month()
+        ));
+
+        let tab_name = match self.ui_state.tab() {
             Tab::Events { .. } => "Events",
             Tab::Tasks { .. } => "Tasks",
         };
-        let title_text = match ui.selected_cal().as_deref() {
+        let agenda_text = match self.ui_state.selected_cal().as_deref() {
             Some(name) => format!("{} - {}", tab_name, name),
             None => format!("{} (All calendars)", tab_name),
         };
-        self.title.set_text(&title_text);
+        self.agenda_title.set_text(&agenda_text);
 
-        let selected = ui.selected_cal();
+        let selected = self.ui_state.selected_cal();
         let show_all = selected.is_none();
 
-        state
+        self.state
             .calendar_names()
             .iter()
             .zip(iter::successors(self.cal_indicator.first_child(), |w| {
@@ -95,9 +139,9 @@ impl Widget {
             self.agenda.remove(&child);
         }
 
-        match &ui.tab {
+        match &self.ui_state.tab() {
             Tab::Events { cal, .. } => {
-                let events = state.get_events(cal.as_deref());
+                let events = self.state.get_events(cal.as_deref());
                 if events.is_empty() {
                     let label = Label::new(Some("No events"));
                     label.set_halign(Align::Center);
@@ -122,7 +166,7 @@ impl Widget {
                 }
             }
             Tab::Tasks { cal, past: _ } => {
-                let tasks = state.get_tasks(cal.as_deref());
+                let tasks = self.state.get_tasks(cal.as_deref());
                 if tasks.is_empty() {
                     let label = Label::new(Some("No tasks"));
                     label.set_halign(Align::Center);
@@ -147,15 +191,11 @@ impl Widget {
                 }
             }
         };
-        drop(ui);
-        drop(state);
     }
 
     pub fn cycle_calendar(&self, right: bool) {
-        let state = self.state.lock().unwrap();
-        let cal_names = state.calendar_names();
-        let mut ui = self.ui_state.lock().unwrap();
-        let new_cal = match ui.selected_cal() {
+        let cal_names = self.state.calendar_names();
+        let new_cal = match self.ui_state.selected_cal() {
             Some(cal) => match cal_names.iter().position(|c| *c == cal) {
                 Some(idx) => {
                     if right {
@@ -180,23 +220,45 @@ impl Widget {
                 }
             }
         };
-        ui.set_selected_cal(new_cal);
-        drop(ui);
-        drop(state);
-        self.update();
+        self.ui_state.set_selected_cal(new_cal);
     }
 
-    pub fn toggle_tab(&self) {
-        let mut ui = self.ui_state.lock().unwrap();
-        let cal = ui.selected_cal();
-        ui.tab = match &ui.tab {
-            Tab::Events { .. } => Tab::Tasks { past: false, cal },
-            Tab::Tasks { .. } => Tab::Events {
-                show_tasks: false,
-                cal,
-            },
+    pub fn handle_action(&self, action: Action) {
+        match action {
+            Action::SectionUp => {
+                self.ui_state.set_focus(Focus::Calendar);
+            }
+            Action::SectionDown => {
+                self.ui_state.set_focus(Focus::Agenda);
+            }
+            Action::Left => {
+                if self.ui_state.focus() == Focus::Calendar {
+                    self.ui_state.cycle_month(false);
+                } else {
+                    self.cycle_calendar(false);
+                }
+            }
+            Action::Right => {
+                if self.ui_state.focus() == Focus::Calendar {
+                    self.ui_state.cycle_month(true);
+                } else {
+                    self.cycle_calendar(true);
+                }
+            }
+            Action::SectionLeft | Action::SectionRight => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    self.ui_state.toggle_tab();
+                }
+            }
+            Action::Reset => {
+                if self.ui_state.focus() == Focus::Calendar {
+                    self.ui_state.reset_month();
+                } else {
+                    self.ui_state.set_selected_cal(None);
+                }
+            }
+            _ => {}
         };
-        drop(ui);
         self.update();
     }
 }

@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use chrono::Local;
 use gtk4::{
     Application, ApplicationWindow, Box, CssProvider, EventControllerKey, Label, Orientation,
@@ -14,14 +12,14 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use crate::{
     config::{Config, keybinds::Action},
     state::State,
-    ui::{calendar::MonthCalendar, widget::Widget},
+    ui::widget::Widget,
 };
 
 mod calendar;
 pub mod state;
 mod widget;
 
-pub fn build_ui(app: &Application, config: Config, s: State) {
+pub fn build_ui(app: &Application, config: Config, state: State) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title(env!("CARGO_PKG_NAME"))
@@ -46,11 +44,11 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-    let state = Arc::new(Mutex::new(s.clone()));
-    let ui_state = Arc::new(Mutex::new(config.init_state.clone()));
+    let ui_state = config.init_state.clone();
 
     let now = Local::now().format("%Y/%m/%d").to_string();
     let date = Label::new(Some(&now));
+    date.add_css_class("section-title");
 
     let vbox = Box::new(Orientation::Vertical, 0);
 
@@ -59,16 +57,13 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
     let divider = Separator::builder().build();
     vbox.append(&divider);
 
-    let cal = MonthCalendar::build();
-    vbox.append(&cal);
+    let widget = Widget::new(ui_state, state);
+    vbox.append(&widget.cal_box);
 
     let divider = Separator::builder().build();
     vbox.append(&divider);
 
-    let widget = Widget::new(ui_state, state);
-    vbox.append(&widget.title);
-    vbox.append(&widget.cal_indicator);
-    vbox.append(&widget.agenda);
+    vbox.append(&widget.agenda_box);
 
     let ckey = EventControllerKey::new();
     let app2 = app.clone();
@@ -78,27 +73,14 @@ pub fn build_ui(app: &Application, config: Config, s: State) {
 
     ckey.connect_key_pressed(move |_, keyval, _, state| {
         if let Some(action) = keybinds.get(&keyval, state) {
-            match action {
-                Action::Right => {
-                    widget2.cycle_calendar(true);
-                    Propagation::Stop
-                }
-                Action::Left => {
-                    widget2.cycle_calendar(false);
-                    Propagation::Stop
-                }
-                Action::SectionLeft | Action::SectionRight => {
-                    widget2.toggle_tab();
-                    Propagation::Stop
-                }
-                Action::Exit => {
-                    window2.set_visible(false);
-                    window2.set_sensitive(false);
-                    app2.quit();
-                    Propagation::Stop
-                }
-                _ => Propagation::Proceed,
-            }
+            if *action == Action::Exit {
+                window2.set_visible(false);
+                window2.set_sensitive(false);
+                app2.quit();
+            } else {
+                widget2.handle_action(*action);
+            };
+            Propagation::Stop
         } else {
             Propagation::Proceed
         }
