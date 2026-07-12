@@ -237,6 +237,13 @@ impl Widget {
                     self.ui_state.toggle_tab();
                 }
             }
+            Action::Reset => {
+                if self.ui_state.focus() == Focus::Calendar {
+                    self.ui_state.reset_month();
+                } else {
+                    self.ui_state.set_selected_cal(None);
+                }
+            }
             _ => {}
         };
         self.update();

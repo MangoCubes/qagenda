@@ -173,4 +173,11 @@ impl UIState {
             Tab::Events { cal: c, .. } => *c = cal,
         }
     }
+
+    pub fn reset_month(&self) {
+        let now = Local::now().date_naive();
+        let mut guard = self.inner.write().unwrap();
+        guard.year = now.year();
+        guard.month = now.month();
+    }
 }
