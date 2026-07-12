@@ -8,20 +8,34 @@ pub struct MonthCalendar;
 
 impl MonthCalendar {
     pub fn build() -> Grid {
+        let grid = Grid::new();
+        grid.set_column_homogeneous(true);
+        grid.set_row_spacing(2);
+        grid.set_column_spacing(4);
+
         let today = Local::now().date_naive();
-        let first = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
-        let next = NaiveDate::from_ymd_opt(today.year(), today.month() + 1, 1).unwrap();
+        Self::update(&grid, today.year(), today.month());
+        grid
+    }
+
+    pub fn update(grid: &Grid, year: i32, month: u32) {
+        while let Some(child) = grid.first_child() {
+            grid.remove(&child);
+        }
+
+        let today = Local::now().date_naive();
+        let first = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+        let next = if month == 12 {
+            NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap()
+        } else {
+            NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap()
+        };
 
         let grid_first = first
             .checked_sub_signed(TimeDelta::days(
                 first.weekday().num_days_from_sunday() as i64
             ))
             .unwrap();
-
-        let grid = Grid::new();
-        grid.set_column_homogeneous(true);
-        grid.set_row_spacing(2);
-        grid.set_column_spacing(4);
 
         ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
             .iter()
@@ -48,7 +62,5 @@ impl MonthCalendar {
             }
             grid.attach(&label, col, row, 1, 1);
         });
-
-        grid
     }
 }

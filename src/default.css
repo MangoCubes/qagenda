@@ -48,3 +48,17 @@ label {
 .cal-indicator-active {
 	background-color: rgba(71, 200, 192, 1);
 }
+
+.section-box {
+	border: 1px solid transparent;
+	padding: 4px;
+	margin: 2px 0px;
+}
+
+.focused-section {
+	border: 1px solid rgba(71, 200, 192, 1);
+}
+
+.unfocused-section {
+	opacity: 0.7;
+}
