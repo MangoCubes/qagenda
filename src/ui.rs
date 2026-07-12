@@ -48,6 +48,7 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
 
     let now = Local::now().format("%Y/%m/%d").to_string();
     let date = Label::new(Some(&now));
+    date.add_css_class("section-title");
 
     let vbox = Box::new(Orientation::Vertical, 0);
 
