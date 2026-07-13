@@ -39,6 +39,13 @@ pub struct Config {
     /// Set to 0 to disable this limit (default).
     #[serde(rename = "maxRecurrenceDate")]
     pub max_recurrence_date: u32,
+    /// If true, then you can click on other windows even when the widget is present. False is
+    /// recommended for those whose workflow is heavily keyboard-oriented, as you can reliably close
+    /// the widget with the quit key. If this is set to true and you accidentally focused something
+    /// else, then you would have to focus the widget before closing it, either by clicking on it or
+    /// hovering your mouse over it.
+    #[serde(rename = "allowUnfocused")]
+    pub allow_unfocused: bool,
 }
 
 impl Default for Config {
@@ -56,6 +63,7 @@ impl Default for Config {
             keybinds: KeyBinds::default(),
             max_recurrence_count: 3,
             max_recurrence_date: 30,
+            allow_unfocused: false,
         }
     }
 }
