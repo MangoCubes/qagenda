@@ -75,3 +75,7 @@ label {
 .detail-row {
 	font-size: smaller;
 }
+
+.details-indicator {
+	min-width: 1em;
+}

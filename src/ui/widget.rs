@@ -175,6 +175,10 @@ impl Widget {
                         summary.set_halign(Align::Start);
                         summary.set_hexpand(true);
 
+                        let more = Label::new(Some(if e.details.is_some() { "+" } else { " " }));
+                        more.set_halign(Align::Center);
+                        more.add_css_class("details-indicator");
+                        row.append(&more);
                         row.append(&summary);
                         item_box.append(&row);
 
@@ -234,6 +238,10 @@ impl Widget {
                         let due = Label::new(Some(&t.duetxt));
                         due.set_halign(Align::End);
 
+                        let more = Label::new(Some(if t.details.is_some() { "+" } else { " " }));
+                        more.set_halign(Align::Center);
+                        more.add_css_class("details-indicator");
+                        row.append(&more);
                         row.append(&summary);
                         row.append(&due);
                         item_box.append(&row);
