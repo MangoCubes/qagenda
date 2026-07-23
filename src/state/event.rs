@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use chrono::Local;
+use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event};
 
 use crate::state::utils::{
@@ -39,13 +39,19 @@ impl EventItem {
                 }
             }
             (Some(s), Some(e)) => {
-                // Leaving every other cases as is for now
                 let s_str = format_date_perhaps_time(&s);
-                let e_str = format_date_perhaps_time(&e);
-                if s_str == e_str {
-                    s_str
+                if let (DatePerhapsTime::Date(sd), DatePerhapsTime::Date(ed)) = (s, e)
+                    && sd.checked_add_days(Days::new(1)).unwrap() == *ed
+                {
+                    format!("{}", s_str)
                 } else {
-                    format!("{} - {}", s_str, e_str)
+                    // Leaving every other cases as is for now
+                    let e_str = format_date_perhaps_time(&e);
+                    if s_str == e_str {
+                        s_str
+                    } else {
+                        format!("{} - {}", s_str, e_str)
+                    }
                 }
             }
             (Some(s), None) => format!("Since {}", format_date_perhaps_time(&s)),
