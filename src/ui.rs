@@ -27,7 +27,11 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
 
     window.init_layer_shell();
     window.set_layer(Layer::Top);
-    window.set_keyboard_mode(KeyboardMode::OnDemand);
+    window.set_keyboard_mode(if config.allow_unfocused {
+        KeyboardMode::OnDemand
+    } else {
+        KeyboardMode::Exclusive
+    });
 
     let (top, bottom, left, right) = config.get_edges();
     window.set_anchor(Edge::Top, top);

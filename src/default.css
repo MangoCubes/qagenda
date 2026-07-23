@@ -23,8 +23,13 @@ label {
 }
 
 .agenda-item {
-	border: 1px solid rgba(71, 200, 192, 1);
+	border: 1px solid transparent;
 	padding: 4px;
+}
+
+.agenda-item-selected {
+	border: 1px solid rgba(71, 200, 192, 1);
+	background: rgba(71, 200, 192, 0.3);
 }
 
 .cal-header {
@@ -50,7 +55,7 @@ label {
 }
 
 .cal-indicator-active {
-	background-color: rgba(71, 200, 192, 1);
+	background: rgba(71, 200, 192, 1);
 }
 
 .section-box {
@@ -65,4 +70,12 @@ label {
 
 .unfocused-section {
 	opacity: 0.7;
+}
+
+.detail-row {
+	font-size: smaller;
+}
+
+.details-indicator {
+	min-width: 1em;
 }

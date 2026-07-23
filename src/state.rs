@@ -1,3 +1,4 @@
+pub mod details;
 pub mod event;
 pub mod task;
 pub mod utils;
@@ -78,8 +79,6 @@ impl MiniCal {
                             // All occurrences are in the past
                             past_events.push(EventItem::from(event));
                         } else {
-                            let summary =
-                                event.get_summary().unwrap_or("Untitled Event").to_string();
                             let items = match event.get_end() {
                                 Some(end) => {
                                     let Some(start) = event.get_start() else {
@@ -108,9 +107,9 @@ impl MiniCal {
                                         .iter()
                                         .map(|start| {
                                             let s = start.naive_local();
-                                            EventItem::new(
-                                                summary.clone(),
-                                                Some(s.into()),
+                                            EventItem::with_custom_time(
+                                                event,
+                                                s.into(),
                                                 Some((s + duration).into()),
                                             )
                                         })
@@ -122,9 +121,9 @@ impl MiniCal {
                                         .dates
                                         .iter()
                                         .map(|start| {
-                                            EventItem::new(
-                                                summary.clone(),
-                                                Some(start.naive_local().into()),
+                                            EventItem::with_custom_time(
+                                                event,
+                                                start.naive_local().into(),
                                                 None,
                                             )
                                         })

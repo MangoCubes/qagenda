@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
 
-use chrono::Local;
-use icalendar::{Component, DatePerhapsTime, Event};
+use chrono::{Days, Local};
+use icalendar::{Component, DatePerhapsTime, Event, EventLike};
 
+use crate::state::details::Details;
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
@@ -13,13 +14,15 @@ pub struct EventItem {
     pub duration: String,
     pub start: Option<DatePerhapsTime>,
     pub end: Option<DatePerhapsTime>,
+    pub details: Option<Details>,
 }
 
 impl EventItem {
-    pub fn new(
+    fn new(
         summary: String,
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
+        details: Option<Details>,
     ) -> Self {
         let duration = match (&start, &end) {
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
@@ -39,13 +42,19 @@ impl EventItem {
                 }
             }
             (Some(s), Some(e)) => {
-                // Leaving every other cases as is for now
                 let s_str = format_date_perhaps_time(&s);
-                let e_str = format_date_perhaps_time(&e);
-                if s_str == e_str {
-                    s_str
+                if let (DatePerhapsTime::Date(sd), DatePerhapsTime::Date(ed)) = (s, e)
+                    && sd.checked_add_days(Days::new(1)).unwrap() == *ed
+                {
+                    format!("{}", s_str)
                 } else {
-                    format!("{} - {}", s_str, e_str)
+                    // Leaving every other cases as is for now
+                    let e_str = format_date_perhaps_time(&e);
+                    if s_str == e_str {
+                        s_str
+                    } else {
+                        format!("{} - {}", s_str, e_str)
+                    }
                 }
             }
             (Some(s), None) => format!("Since {}", format_date_perhaps_time(&s)),
@@ -57,14 +66,36 @@ impl EventItem {
             duration,
             start,
             end,
+            details,
         }
     }
 
     pub fn from(event: &Event) -> Self {
-        let summary = event.get_summary().unwrap_or("Untitled Event").to_string();
-        let start = event.get_start();
-        let end = event.get_end();
-        Self::new(summary, start, end)
+        Self::new(
+            event.get_summary().unwrap_or("Untitled Event").to_string(),
+            event.get_start(),
+            event.get_end(),
+            Details::new(
+                event.get_location().map(str::to_string),
+                event.get_description().map(str::to_string),
+            ),
+        )
+    }
+
+    pub fn with_custom_time(
+        event: &Event,
+        start: DatePerhapsTime,
+        end: Option<DatePerhapsTime>,
+    ) -> Self {
+        Self::new(
+            event.get_summary().unwrap_or("Untitled Event").to_string(),
+            Some(start),
+            end,
+            Details::new(
+                event.get_location().map(str::to_string),
+                event.get_description().map(str::to_string),
+            ),
+        )
     }
 
     pub fn in_progress(&self) -> bool {

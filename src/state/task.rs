@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
 
 use chrono::Local;
-use icalendar::{Component, DatePerhapsTime, Todo, TodoStatus};
+use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
 
 use chrono::NaiveDateTime;
 
+use crate::state::details::Details;
 use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_naive_date};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +17,7 @@ pub struct TaskItem {
     pub duetxt: String,
     pub due: Option<DatePerhapsTime>,
     pub start: Option<DatePerhapsTime>,
+    pub details: Option<Details>,
 }
 
 impl TaskItem {
@@ -43,6 +45,10 @@ impl TaskItem {
             duetxt,
             due,
             start,
+            details: Details::new(
+                task.get_location().map(str::to_string),
+                task.get_description().map(str::to_string),
+            ),
         }
     }
 }
