@@ -58,6 +58,7 @@ struct InnerUIState {
     year: i32,
     month: u32,
     current_item: usize,
+    expanded: bool,
 }
 
 impl Default for InnerUIState {
@@ -70,6 +71,7 @@ impl Default for InnerUIState {
             year: now.year(),
             month: now.month(),
             current_item: 0,
+            expanded: false,
         }
     }
 }
@@ -134,6 +136,7 @@ impl UIState {
             },
         };
         guard.current_item = 0;
+        guard.expanded = false;
     }
 
     pub fn year(&self) -> i32 {
@@ -176,6 +179,7 @@ impl UIState {
             Tab::Events { cal: c, .. } => *c = cal,
         }
         guard.current_item = 0;
+        guard.expanded = false;
     }
 
     pub fn reset_month(&self) {
@@ -209,5 +213,14 @@ impl UIState {
         } else {
             guard.current_item -= 1;
         }
+    }
+
+    pub fn expanded(&self) -> bool {
+        self.inner.read().unwrap().expanded
+    }
+
+    pub fn toggle_details(&self) {
+        let mut guard = self.inner.write().unwrap();
+        guard.expanded = !guard.expanded;
     }
 }

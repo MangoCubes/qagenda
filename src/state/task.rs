@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use chrono::Local;
-use icalendar::{Component, DatePerhapsTime, Todo, TodoStatus};
+use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
 
 use chrono::NaiveDateTime;
 
@@ -16,6 +16,8 @@ pub struct TaskItem {
     pub duetxt: String,
     pub due: Option<DatePerhapsTime>,
     pub start: Option<DatePerhapsTime>,
+    pub location: Option<String>,
+    pub description: Option<String>,
 }
 
 impl TaskItem {
@@ -43,6 +45,8 @@ impl TaskItem {
             duetxt,
             due,
             start,
+            location: task.get_location().map(str::to_string),
+            description: task.get_description().map(str::to_string),
         }
     }
 }

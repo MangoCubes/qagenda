@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use chrono::{Days, Local};
-use icalendar::{Component, DatePerhapsTime, Event};
+use icalendar::{Component, DatePerhapsTime, Event, EventLike};
 
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
@@ -13,13 +13,17 @@ pub struct EventItem {
     pub duration: String,
     pub start: Option<DatePerhapsTime>,
     pub end: Option<DatePerhapsTime>,
+    pub location: Option<String>,
+    pub description: Option<String>,
 }
 
 impl EventItem {
-    pub fn new(
+    fn new(
         summary: String,
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
     ) -> Self {
         let duration = match (&start, &end) {
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
@@ -63,14 +67,33 @@ impl EventItem {
             duration,
             start,
             end,
+            location,
+            description,
         }
     }
 
     pub fn from(event: &Event) -> Self {
-        let summary = event.get_summary().unwrap_or("Untitled Event").to_string();
-        let start = event.get_start();
-        let end = event.get_end();
-        Self::new(summary, start, end)
+        Self::new(
+            event.get_summary().unwrap_or("Untitled Event").to_string(),
+            event.get_start(),
+            event.get_end(),
+            event.get_location().map(str::to_string),
+            event.get_description().map(str::to_string),
+        )
+    }
+
+    pub fn with_custom_time(
+        event: &Event,
+        start: DatePerhapsTime,
+        end: Option<DatePerhapsTime>,
+    ) -> Self {
+        Self::new(
+            event.get_summary().unwrap_or("Untitled Event").to_string(),
+            Some(start),
+            end,
+            event.get_location().map(str::to_string),
+            event.get_description().map(str::to_string),
+        )
     }
 
     pub fn in_progress(&self) -> bool {

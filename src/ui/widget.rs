@@ -1,7 +1,7 @@
 use std::iter;
 
 use gtk4::{
-    Align, Box, Grid, Label, Orientation,
+    Align, Box, Grid, Label, Orientation, Separator,
     prelude::{BoxExt, WidgetExt},
 };
 
@@ -156,25 +156,48 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
+                    let expanded = self.ui_state.expanded();
                     events.iter().enumerate().for_each(|(i, e)| {
-                        let item_box = Box::new(Orientation::Horizontal, 8);
+                        let selected = self.ui_state.focus() == Focus::Agenda
+                            && i == self.ui_state.current_item();
+                        let expand = expanded && selected;
+
+                        let item_box = Box::new(Orientation::Vertical, 0);
                         item_box.add_css_class("agenda-event-item");
                         item_box.add_css_class("agenda-item");
-                        if self.ui_state.focus() == Focus::Agenda
-                            && i == self.ui_state.current_item()
-                        {
+                        if selected {
                             item_box.add_css_class("agenda-item-selected");
                         }
+
+                        let row = Box::new(Orientation::Horizontal, 8);
 
                         let summary = Label::new(Some(&e.summary));
                         summary.set_halign(Align::Start);
                         summary.set_hexpand(true);
 
-                        let duration = Label::new(Some(&e.duration));
-                        duration.set_halign(Align::End);
+                        row.append(&summary);
+                        item_box.append(&row);
 
-                        item_box.append(&summary);
-                        item_box.append(&duration);
+                        if expand {
+                            let details = Box::new(Orientation::Vertical, 4);
+
+                            if let Some(l) = &e.location {
+                                let label = Label::new(Some(&format!("Where: {}", l)));
+                                label.set_halign(Align::Start);
+                                label.add_css_class("detail-row");
+                                details.append(&label);
+                            }
+
+                            if let Some(d) = &e.description {
+                                let label = Label::new(Some(&format!("Notes: {}", d)));
+                                label.set_halign(Align::Start);
+                                label.set_wrap(true);
+                                label.add_css_class("detail-row");
+                                details.append(&label);
+                            }
+
+                            item_box.append(&details);
+                        }
 
                         self.agenda.append(&item_box);
                     });
@@ -187,15 +210,20 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
+                    let expanded = self.ui_state.expanded();
                     tasks.iter().enumerate().for_each(|(i, t)| {
-                        let item_box = Box::new(Orientation::Horizontal, 8);
+                        let selected = self.ui_state.focus() == Focus::Agenda
+                            && i == self.ui_state.current_item();
+                        let expand = expanded && selected;
+
+                        let item_box = Box::new(Orientation::Vertical, 0);
                         item_box.add_css_class("agenda-task-item");
                         item_box.add_css_class("agenda-item");
-                        if self.ui_state.focus() == Focus::Agenda
-                            && i == self.ui_state.current_item()
-                        {
+                        if selected {
                             item_box.add_css_class("agenda-item-selected");
                         }
+
+                        let row = Box::new(Orientation::Horizontal, 8);
 
                         let summary = Label::new(Some(&t.summary));
                         summary.set_halign(Align::Start);
@@ -204,8 +232,29 @@ impl Widget {
                         let due = Label::new(Some(&t.duetxt));
                         due.set_halign(Align::End);
 
-                        item_box.append(&summary);
-                        item_box.append(&due);
+                        row.append(&summary);
+                        row.append(&due);
+                        item_box.append(&row);
+
+                        if expand {
+                            let details = Box::new(Orientation::Vertical, 4);
+                            if let Some(l) = &t.location {
+                                let label = Label::new(Some(&format!("Where: {}", l)));
+                                label.set_halign(Align::Start);
+                                label.add_css_class("detail-row");
+                                details.append(&label);
+                            }
+
+                            if let Some(d) = &t.description {
+                                let label = Label::new(Some(&format!("Notes: {}", d)));
+                                label.set_halign(Align::Start);
+                                label.set_wrap(true);
+                                label.add_css_class("detail-row");
+                                details.append(&label);
+                            }
+
+                            item_box.append(&details);
+                        }
 
                         self.agenda.append(&item_box);
                     });
@@ -294,6 +343,11 @@ impl Widget {
                     self.ui_state.reset_month();
                 } else {
                     self.ui_state.set_selected_cal(None);
+                }
+            }
+            Action::Expand => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    self.ui_state.toggle_details();
                 }
             }
             _ => {}
