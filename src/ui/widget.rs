@@ -139,6 +139,15 @@ impl Widget {
             self.agenda.remove(&child);
         }
 
+        let item_count = match &self.ui_state.tab() {
+            Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
+            Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+        };
+
+        if item_count > 0 && self.ui_state.current_item() >= item_count {
+            self.ui_state.set_current_item(item_count - 1);
+        }
+
         match &self.ui_state.tab() {
             Tab::Events { cal, .. } => {
                 let events = self.state.get_events(cal.as_deref());
@@ -147,9 +156,15 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    events.iter().for_each(|e| {
+                    events.iter().enumerate().for_each(|(i, e)| {
                         let item_box = Box::new(Orientation::Horizontal, 8);
                         item_box.add_css_class("agenda-event-item");
+                        item_box.add_css_class("agenda-item");
+                        if self.ui_state.focus() == Focus::Agenda
+                            && i == self.ui_state.current_item()
+                        {
+                            item_box.add_css_class("agenda-item-selected");
+                        }
 
                         let summary = Label::new(Some(&e.summary));
                         summary.set_halign(Align::Start);
@@ -172,9 +187,15 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    tasks.iter().for_each(|t| {
+                    tasks.iter().enumerate().for_each(|(i, t)| {
                         let item_box = Box::new(Orientation::Horizontal, 8);
                         item_box.add_css_class("agenda-task-item");
+                        item_box.add_css_class("agenda-item");
+                        if self.ui_state.focus() == Focus::Agenda
+                            && i == self.ui_state.current_item()
+                        {
+                            item_box.add_css_class("agenda-item-selected");
+                        }
 
                         let summary = Label::new(Some(&t.summary));
                         summary.set_halign(Align::Start);
@@ -248,6 +269,24 @@ impl Widget {
             Action::SectionLeft | Action::SectionRight => {
                 if self.ui_state.focus() == Focus::Agenda {
                     self.ui_state.toggle_tab();
+                }
+            }
+            Action::Up => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    let item_count = match &self.ui_state.tab() {
+                        Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
+                        Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+                    };
+                    self.ui_state.cycle_item(false, item_count);
+                }
+            }
+            Action::Down => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    let item_count = match &self.ui_state.tab() {
+                        Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
+                        Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+                    };
+                    self.ui_state.cycle_item(true, item_count);
                 }
             }
             Action::Reset => {

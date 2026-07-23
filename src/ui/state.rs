@@ -57,6 +57,7 @@ struct InnerUIState {
     focus: Focus,
     year: i32,
     month: u32,
+    current_item: usize,
 }
 
 impl Default for InnerUIState {
@@ -68,6 +69,7 @@ impl Default for InnerUIState {
             focus: Focus::default(),
             year: now.year(),
             month: now.month(),
+            current_item: 0,
         }
     }
 }
@@ -131,6 +133,7 @@ impl UIState {
                 cal,
             },
         };
+        guard.current_item = 0;
     }
 
     pub fn year(&self) -> i32 {
@@ -172,6 +175,7 @@ impl UIState {
             Tab::Tasks { cal: c, .. } => *c = cal,
             Tab::Events { cal: c, .. } => *c = cal,
         }
+        guard.current_item = 0;
     }
 
     pub fn reset_month(&self) {
@@ -179,5 +183,31 @@ impl UIState {
         let mut guard = self.inner.write().unwrap();
         guard.year = now.year();
         guard.month = now.month();
+    }
+
+    pub fn current_item(&self) -> usize {
+        self.inner.read().unwrap().current_item
+    }
+
+    pub fn set_current_item(&self, item: usize) {
+        self.inner.write().unwrap().current_item = item;
+    }
+
+    pub fn cycle_item(&self, next: bool, max: usize) {
+        if max == 0 {
+            return;
+        }
+        let mut guard = self.inner.write().unwrap();
+        if next {
+            if guard.current_item + 1 >= max {
+                guard.current_item = 0;
+            } else {
+                guard.current_item += 1;
+            }
+        } else if guard.current_item == 0 {
+            guard.current_item = max - 1;
+        } else {
+            guard.current_item -= 1;
+        }
     }
 }
