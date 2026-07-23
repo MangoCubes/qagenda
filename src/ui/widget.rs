@@ -181,19 +181,21 @@ impl Widget {
                         if expand {
                             let details = Box::new(Orientation::Vertical, 4);
 
-                            if let Some(l) = &e.location {
-                                let label = Label::new(Some(&format!("Where: {}", l)));
-                                label.set_halign(Align::Start);
-                                label.add_css_class("detail-row");
-                                details.append(&label);
-                            }
+                            if let Some(d) = &e.details {
+                                if let Some(l) = &d.location {
+                                    let label = Label::new(Some(&format!("Where: {}", l)));
+                                    label.set_halign(Align::Start);
+                                    label.add_css_class("detail-row");
+                                    details.append(&label);
+                                }
 
-                            if let Some(d) = &e.description {
-                                let label = Label::new(Some(&format!("Notes: {}", d)));
-                                label.set_halign(Align::Start);
-                                label.set_wrap(true);
-                                label.add_css_class("detail-row");
-                                details.append(&label);
+                                if let Some(desc) = &d.description {
+                                    let label = Label::new(Some(&format!("Notes: {}", desc)));
+                                    label.set_halign(Align::Start);
+                                    label.set_wrap(true);
+                                    label.add_css_class("detail-row");
+                                    details.append(&label);
+                                }
                             }
 
                             item_box.append(&details);
@@ -238,19 +240,22 @@ impl Widget {
 
                         if expand {
                             let details = Box::new(Orientation::Vertical, 4);
-                            if let Some(l) = &t.location {
-                                let label = Label::new(Some(&format!("Where: {}", l)));
-                                label.set_halign(Align::Start);
-                                label.add_css_class("detail-row");
-                                details.append(&label);
-                            }
 
-                            if let Some(d) = &t.description {
-                                let label = Label::new(Some(&format!("Notes: {}", d)));
-                                label.set_halign(Align::Start);
-                                label.set_wrap(true);
-                                label.add_css_class("detail-row");
-                                details.append(&label);
+                            if let Some(d) = &t.details {
+                                if let Some(l) = &d.location {
+                                    let label = Label::new(Some(&format!("Where: {}", l)));
+                                    label.set_halign(Align::Start);
+                                    label.add_css_class("detail-row");
+                                    details.append(&label);
+                                }
+
+                                if let Some(desc) = &d.description {
+                                    let label = Label::new(Some(&format!("Notes: {}", desc)));
+                                    label.set_halign(Align::Start);
+                                    label.set_wrap(true);
+                                    label.add_css_class("detail-row");
+                                    details.append(&label);
+                                }
                             }
 
                             item_box.append(&details);

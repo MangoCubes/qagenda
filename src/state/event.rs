@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
 
+use crate::state::details::Details;
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
@@ -13,8 +14,7 @@ pub struct EventItem {
     pub duration: String,
     pub start: Option<DatePerhapsTime>,
     pub end: Option<DatePerhapsTime>,
-    pub location: Option<String>,
-    pub description: Option<String>,
+    pub details: Option<Details>,
 }
 
 impl EventItem {
@@ -22,8 +22,7 @@ impl EventItem {
         summary: String,
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
-        location: Option<String>,
-        description: Option<String>,
+        details: Option<Details>,
     ) -> Self {
         let duration = match (&start, &end) {
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
@@ -67,8 +66,7 @@ impl EventItem {
             duration,
             start,
             end,
-            location,
-            description,
+            details,
         }
     }
 
@@ -77,8 +75,10 @@ impl EventItem {
             event.get_summary().unwrap_or("Untitled Event").to_string(),
             event.get_start(),
             event.get_end(),
-            event.get_location().map(str::to_string),
-            event.get_description().map(str::to_string),
+            Details::new(
+                event.get_location().map(str::to_string),
+                event.get_description().map(str::to_string),
+            ),
         )
     }
 
@@ -91,8 +91,10 @@ impl EventItem {
             event.get_summary().unwrap_or("Untitled Event").to_string(),
             Some(start),
             end,
-            event.get_location().map(str::to_string),
-            event.get_description().map(str::to_string),
+            Details::new(
+                event.get_location().map(str::to_string),
+                event.get_description().map(str::to_string),
+            ),
         )
     }
 
