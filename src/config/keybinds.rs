@@ -17,6 +17,9 @@ pub enum Action {
     Exit,
     Reset,
     Expand,
+    ToggleComplete,
+    Yes,
+    No,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +39,9 @@ impl Default for KeyBinds {
             ((Key::space, ModifierType::empty()), Action::Reset),
             ((Key::Escape, ModifierType::empty()), Action::Exit),
             ((Key::Tab, ModifierType::empty()), Action::Expand),
+            ((Key::Return, ModifierType::empty()), Action::ToggleComplete),
+            ((Key::y, ModifierType::empty()), Action::Yes),
+            ((Key::n, ModifierType::empty()), Action::No),
         ]))
     }
 }
