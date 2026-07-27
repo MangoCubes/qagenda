@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MiniCal {
     pub events: Vec<EventItem>,
     pub recurring_events: Vec<EventItem>,
@@ -197,10 +197,10 @@ impl MiniCal {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct State {
     cal: HashMap<String, MiniCal>,
-    readonly: bool,
+    dry_run: bool,
 }
 
 pub enum FailReason {
@@ -211,7 +211,7 @@ pub enum FailReason {
 impl State {
     pub fn new(
         dir: PathBuf,
-        readonly: bool,
+        dry_run: bool,
         max_recurrence_count: u32,
         max_recurrence_date: u32,
     ) -> Self {
@@ -282,7 +282,7 @@ impl State {
             })
             .collect();
 
-        Self { cal, readonly }
+        Self { cal, dry_run }
     }
 
     pub fn calendar_names(&self) -> Vec<String> {

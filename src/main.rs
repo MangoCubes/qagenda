@@ -26,8 +26,8 @@ struct Args {
     #[arg(short, long)]
     verbose: bool,
 
-    #[arg(short, long)]
-    readonly: bool,
+    #[arg(long)]
+    dry_run: bool,
 
     /// Path to config file
     #[arg(short, long)]
@@ -57,7 +57,7 @@ fn main() {
         config.validate();
         let state = State::new(
             config.dir.clone(),
-            args.readonly,
+            args.dry_run,
             config.max_recurrence_count,
             config.max_recurrence_date,
         );
