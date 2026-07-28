@@ -10,6 +10,10 @@ use crate::state::{
 #[derive(Debug, Clone)]
 pub struct MiniCal {
     pub events: Vec<EventItem>,
+    /// Contains the first occurrence only
+    /// This field ensures that [`MiniCal::events`] + [`MiniCal::init_events`] + [`MiniCal::past_events`] = all events without duplicates
+    /// We can't use UUID to identify events uniquely in [`MiniCal::recurring_events`]
+    pub init_events: Vec<EventItem>,
     pub recurring_events: Vec<EventItem>,
     /// If the last occurrence of a recurring event is past the current date, it goes here as well
     pub past_events: Vec<EventItem>,
@@ -26,7 +30,8 @@ impl MiniCal {
         max_recurrence_date: u32,
     ) -> Self {
         let today = Local::now().date_naive();
-        let (mut events, mut recurring_events, mut past_events) = (vec![], vec![], vec![]);
+        let (mut events, mut init_events, mut recurring_events, mut past_events) =
+            (vec![], vec![], vec![], vec![]);
         let start_window = Tz::LOCAL
             .from_local_datetime(&today.and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap()))
             .single()
@@ -52,6 +57,7 @@ impl MiniCal {
             if event.property_value("RRULE").is_some() {
                 match event.get_recurrence() {
                     Ok(rrule) => {
+                        init_events.push(EventItem::from(event));
                         let result = {
                             let after = rrule.after(start_window);
                             let bounded = match end_window {
@@ -161,6 +167,7 @@ impl MiniCal {
 
         Self {
             events,
+            init_events,
             recurring_events,
             past_events,
             tasks,
