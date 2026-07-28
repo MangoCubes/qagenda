@@ -1,4 +1,5 @@
 pub mod details;
+pub mod diff;
 pub mod event;
 pub mod minical;
 pub mod task;
@@ -15,18 +16,14 @@ use icalendar::Calendar;
 
 use crate::{
     debug,
-    state::{event::EventItem, minical::MiniCal, task::TaskItem},
+    state::{diff::Diff, event::EventItem, minical::MiniCal, task::TaskItem},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct State {
     cal: HashMap<String, MiniCal>,
     dry_run: bool,
-}
-
-pub enum FailReason {
-    NotAllowed,
-    CannotWrite,
+    pending: Diff,
 }
 
 impl State {
@@ -103,7 +100,11 @@ impl State {
             })
             .collect();
 
-        Self { cal, dry_run }
+        Self {
+            cal,
+            dry_run,
+            pending: Diff::new(),
+        }
     }
 
     pub fn calendar_names(&self) -> Vec<String> {
