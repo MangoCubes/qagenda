@@ -18,7 +18,7 @@ pub struct TaskItem {
     pub due: Option<DatePerhapsTime>,
     pub start: Option<DatePerhapsTime>,
     pub details: Option<Details>,
-    pub uid: Option<String>,
+    pub uid: String,
 }
 
 impl TaskItem {
@@ -50,7 +50,10 @@ impl TaskItem {
                 task.get_location().map(str::to_string),
                 task.get_description().map(str::to_string),
             ),
-            uid: task.property_value("UID").map(|s| s.to_string()),
+            uid: task
+                .property_value("UID")
+                .map(|s| s.to_string())
+                .expect("Task without UID is not supported!"),
         }
     }
 

@@ -17,6 +17,7 @@ use icalendar::Calendar;
 use crate::{
     debug,
     state::{diff::Diff, event::EventItem, minical::MiniCal, task::TaskItem},
+    types::UUID,
 };
 
 #[derive(Clone)]
@@ -146,5 +147,20 @@ impl State {
         } else {
             get_all()
         }
+    }
+
+    pub fn get_orig(&self) -> Diff {
+        let (events, tasks) = self
+            .cal
+            .iter()
+            .map(|(name, cal)| {
+                (
+                    (name.clone(), cal.get_events()),
+                    (name.clone(), cal.get_tasks()),
+                )
+            })
+            .unzip();
+
+        Diff::from(events, tasks)
     }
 }

@@ -18,4 +18,10 @@ impl Diff {
             tasks: HashMap::new(),
         }
     }
+    pub fn from(
+        events: HashMap<String, HashMap<UUID, EventItem>>,
+        tasks: HashMap<String, HashMap<UUID, TaskItem>>,
+    ) -> Self {
+        Self { events, tasks }
+    }
 }

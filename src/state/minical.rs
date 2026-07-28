@@ -1,10 +1,15 @@
+use std::collections::HashMap;
+
 use chrono::{Days, Local, NaiveTime, TimeDelta, TimeZone};
 use icalendar::{Calendar, Component, DatePerhapsTime, EventLike, Tz};
 
-use crate::state::{
-    event::EventItem,
-    task::TaskItem,
-    utils::{get_naive_date, get_naive_datetime, is_past_event},
+use crate::{
+    state::{
+        event::EventItem,
+        task::TaskItem,
+        utils::{get_naive_date, get_naive_datetime, is_past_event},
+    },
+    types::UUID,
 };
 
 #[derive(Debug, Clone)]
@@ -186,5 +191,25 @@ impl MiniCal {
 
     pub fn tasks(&self) -> Vec<TaskItem> {
         self.tasks.clone()
+    }
+
+    pub fn get_events(&self) -> HashMap<UUID, EventItem> {
+        self.events
+            .clone()
+            .into_iter()
+            .chain(self.init_events.clone())
+            .chain(self.past_events.clone())
+            .map(|e| (e.uid.clone(), e))
+            .collect()
+    }
+
+    pub fn get_tasks(&self) -> HashMap<UUID, TaskItem> {
+        self.tasks
+            .clone()
+            .into_iter()
+            .chain(self.completed_tasks.clone())
+            .chain(self.upcoming_tasks.clone())
+            .map(|e| (e.uid.clone(), e))
+            .collect()
     }
 }

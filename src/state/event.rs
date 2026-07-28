@@ -7,6 +7,7 @@ use crate::state::details::Details;
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
+use crate::types::UUID;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventItem {
@@ -15,10 +16,12 @@ pub struct EventItem {
     pub start: Option<DatePerhapsTime>,
     pub end: Option<DatePerhapsTime>,
     pub details: Option<Details>,
+    pub uid: UUID,
 }
 
 impl EventItem {
     fn new(
+        uid: String,
         summary: String,
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
@@ -62,6 +65,7 @@ impl EventItem {
             (None, None) => "No time set".to_string(),
         };
         Self {
+            uid,
             summary,
             duration,
             start,
@@ -72,6 +76,10 @@ impl EventItem {
 
     pub fn from(event: &Event) -> Self {
         Self::new(
+            event
+                .property_value("UID")
+                .map(|s| s.to_string())
+                .expect("Event without UUID is not supported!"),
             event.get_summary().unwrap_or("Untitled Event").to_string(),
             event.get_start(),
             event.get_end(),
@@ -88,6 +96,10 @@ impl EventItem {
         end: Option<DatePerhapsTime>,
     ) -> Self {
         Self::new(
+            event
+                .property_value("UID")
+                .map(|s| s.to_string())
+                .expect("Event without UUID is not supported!"),
             event.get_summary().unwrap_or("Untitled Event").to_string(),
             Some(start),
             end,
