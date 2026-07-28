@@ -53,6 +53,22 @@ impl TaskItem {
             uid: task.property_value("UID").map(|s| s.to_string()),
         }
     }
+
+    pub fn diff(&self, other: &TaskItem) -> Vec<String> {
+        // For now, handling change in completed status only
+        let mut diffs = vec![];
+        fn completed(val: bool) -> &'static str {
+            if val { "complete" } else { "incomplete" }
+        }
+        if self.completed != other.completed {
+            diffs.push(format!(
+                "Task {} -> {}",
+                completed(self.completed),
+                completed(other.completed),
+            ));
+        }
+        diffs
+    }
 }
 
 impl PartialOrd for TaskItem {

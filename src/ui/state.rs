@@ -1,7 +1,13 @@
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
+
+use crate::state::event::EventItem;
+use crate::state::task::TaskItem;
+use crate::types::UUID;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -49,7 +55,7 @@ pub enum Focus {
     Calendar,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 struct InnerUIState {
     tab: Tab,
@@ -59,6 +65,11 @@ struct InnerUIState {
     month: u32,
     current_item: usize,
     expanded: bool,
+    #[serde(skip)]
+    pub pending: (
+        HashMap<String, HashMap<UUID, EventItem>>,
+        HashMap<String, HashMap<UUID, TaskItem>>,
+    ),
 }
 
 impl Default for InnerUIState {
@@ -72,6 +83,7 @@ impl Default for InnerUIState {
             month: now.month(),
             current_item: 0,
             expanded: false,
+            pending: (HashMap::new(), HashMap::new()),
         }
     }
 }

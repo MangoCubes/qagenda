@@ -1,6 +1,7 @@
 mod config;
 mod logging;
 mod state;
+mod types;
 mod ui;
 
 use std::{path::PathBuf, process};
