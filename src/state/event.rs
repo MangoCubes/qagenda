@@ -122,6 +122,10 @@ impl EventItem {
             .map_or(true, |e| dpt_to_naive_datetime(e) > now);
         started && not_ended
     }
+
+    pub fn diff(&self, new: &EventItem) -> Vec<String> {
+        todo!()
+    }
 }
 
 impl PartialOrd for EventItem {

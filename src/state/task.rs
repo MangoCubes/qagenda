@@ -57,6 +57,7 @@ impl TaskItem {
         }
     }
 
+    /// [`other`] is the new task
     pub fn diff(&self, other: &TaskItem) -> Vec<String> {
         // For now, handling change in completed status only
         let mut diffs = vec![];
