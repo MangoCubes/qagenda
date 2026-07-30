@@ -85,6 +85,10 @@ impl Widget {
     }
 
     pub fn update(&self) {
+        if self.ui_state.confirming_exit() {
+            self.show_confirm_exit();
+            return;
+        }
         match self.ui_state.focus() {
             Focus::Calendar => {
                 self.cal_box.add_css_class("focused-section");
@@ -265,6 +269,36 @@ impl Widget {
                 }
             }
         };
+    }
+
+    fn show_confirm_exit(&self) {
+        while let Some(child) = self.agenda.first_child() {
+            self.agenda.remove(&child);
+        }
+
+        self.agenda_title.set_text("Pending Changes");
+
+        self.state
+            .pending
+            .get_changes()
+            .iter()
+            .for_each(|(cal, msgs)| {
+                let cal = Label::new(Some(&format!("[{}]", cal)));
+                cal.set_halign(Align::Start);
+                cal.add_css_class("section-title");
+                self.agenda.append(&cal);
+
+                msgs.iter()
+                    .map(|msg| {
+                        let item = Label::new(Some(&format!("  - {}", msg)));
+                        item.set_halign(Align::Start);
+                        item
+                    })
+                    .for_each(|l| self.agenda.append(&l));
+            });
+        let query = Label::new(Some("Write changes? (y/n/esc)"));
+        query.set_halign(Align::Start);
+        self.agenda.append(&query);
     }
 
     pub fn cycle_calendar(&self, right: bool) {

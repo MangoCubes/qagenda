@@ -77,10 +77,34 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
 
     ckey.connect_key_pressed(move |_, keyval, _, state| {
         if let Some(action) = keybinds.get(&keyval, state) {
-            if *action == Action::Exit {
-                window2.set_visible(false);
-                window2.set_sensitive(false);
-                app2.quit();
+            if widget2.ui_state.confirming_exit() {
+                match action {
+                    Action::Yes => {
+                        // TODO: write changes
+                        window2.set_visible(false);
+                        window2.set_sensitive(false);
+                        app2.quit();
+                    }
+                    Action::No => {
+                        window2.set_visible(false);
+                        window2.set_sensitive(false);
+                        app2.quit();
+                    }
+                    Action::Exit => {
+                        widget2.ui_state.set_confirming_exit(false);
+                        widget2.update();
+                    }
+                    _ => {}
+                }
+            } else if *action == Action::Exit {
+                if widget2.state.pending.has_changes() {
+                    widget2.ui_state.set_confirming_exit(true);
+                    widget2.update();
+                } else {
+                    window2.set_visible(false);
+                    window2.set_sensitive(false);
+                    app2.quit();
+                }
             } else {
                 widget2.handle_action(*action);
             };

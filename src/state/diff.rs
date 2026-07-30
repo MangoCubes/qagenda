@@ -119,4 +119,14 @@ impl Diff {
     pub fn get_changes(&self) -> HashMap<String, Vec<String>> {
         self.inner.read().unwrap().get_changes()
     }
+
+    pub fn has_changes(&self) -> bool {
+        let inner = self.inner.read().unwrap();
+        !inner.new_events.is_empty()
+            || !inner.new_tasks.is_empty()
+            || !inner.events.is_empty()
+            || !inner.tasks.is_empty()
+            || !inner.deleted_events.is_empty()
+            || !inner.deleted_tasks.is_empty()
+    }
 }

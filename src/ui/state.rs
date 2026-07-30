@@ -60,10 +60,8 @@ struct InnerUIState {
     month: u32,
     current_item: usize,
     expanded: bool,
-    // #[serde(skip)]
-    // tasks: Vec<TaskItem>,
-    // #[serde(skip)]
-    // events: Vec<EventItem>,
+    #[serde(skip)]
+    confirming_exit: bool,
 }
 
 impl Default for InnerUIState {
@@ -77,6 +75,7 @@ impl Default for InnerUIState {
             month: now.month(),
             current_item: 0,
             expanded: false,
+            confirming_exit: false,
         }
     }
 }
@@ -227,5 +226,13 @@ impl UIState {
     pub fn toggle_details(&self) {
         let mut guard = self.inner.write().unwrap();
         guard.expanded = !guard.expanded;
+    }
+
+    pub fn confirming_exit(&self) -> bool {
+        self.inner.read().unwrap().confirming_exit
+    }
+
+    pub fn set_confirming_exit(&self, exit: bool) {
+        self.inner.write().unwrap().confirming_exit = exit;
     }
 }
