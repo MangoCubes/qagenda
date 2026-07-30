@@ -1,6 +1,7 @@
 pub mod details;
 pub mod diff;
 pub mod event;
+pub mod itemlist;
 pub mod minical;
 pub mod task;
 pub mod utils;
@@ -16,7 +17,13 @@ use icalendar::Calendar;
 
 use crate::{
     debug,
-    state::{diff::Diff, event::EventItem, minical::MiniCal, task::TaskItem},
+    state::{
+        diff::Diff,
+        event::EventItem,
+        itemlist::{EventList, TaskList},
+        minical::MiniCal,
+        task::TaskItem,
+    },
 };
 
 #[derive(Clone)]
@@ -113,42 +120,54 @@ impl State {
         names
     }
 
-    pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
-        let get_all = || {
-            let mut events: Vec<EventItem> =
-                self.cal.values().flat_map(|c| c.active_events()).collect();
-            events.sort();
-            events
-        };
-        if let Some(name) = cal {
-            if let Some(cal) = self.cal.get(name) {
-                cal.active_events()
-            } else {
-                get_all()
-            }
-        } else {
-            get_all()
+    pub fn get_tasks_count(&self, cal: Option<&str>) -> usize {
+        match cal {
+            Some(name) => self.cal[name].incomplete_tasks_count(),
+            None => self
+                .cal
+                .iter()
+                .fold(0, |count, (_, c)| count + c.incomplete_tasks_count()),
+        }
+    }
+    pub fn get_events_count(&self, cal: Option<&str>) -> usize {
+        match cal {
+            Some(name) => self.cal[name].active_events_count(),
+            None => self
+                .cal
+                .iter()
+                .fold(0, |count, (_, c)| count + c.active_events_count()),
         }
     }
 
-    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
-        let get_all = || {
-            let mut tasks: Vec<TaskItem> = self
-                .cal
-                .values()
-                .flat_map(|c| c.incomplete_tasks())
-                .collect();
-            tasks.sort();
-            tasks
-        };
-        if let Some(name) = cal {
-            if let Some(cal) = self.cal.get(name) {
-                cal.incomplete_tasks()
-            } else {
-                get_all()
+    pub fn get_events(&self, cal: Option<&str>) -> EventList {
+        match cal {
+            Some(name) => EventList::Single((name.to_string(), self.cal[name].active_events())),
+            None => {
+                let mut events: Vec<(String, EventItem)> = self
+                    .cal
+                    .iter()
+                    .flat_map(|(name, c)| c.active_events().into_iter().map(|e| (name.clone(), e)))
+                    .collect();
+                events.sort_unstable_by(|(_, a), (_, b)| a.cmp(b));
+                EventList::Mixed(events)
             }
-        } else {
-            get_all()
+        }
+    }
+
+    pub fn get_tasks(&self, cal: Option<&str>) -> TaskList {
+        match cal {
+            Some(name) => TaskList::Single((name.to_string(), self.cal[name].incomplete_tasks())),
+            None => {
+                let mut tasks: Vec<(String, TaskItem)> = self
+                    .cal
+                    .iter()
+                    .flat_map(|(name, c)| {
+                        c.incomplete_tasks().into_iter().map(|e| (name.clone(), e))
+                    })
+                    .collect();
+                tasks.sort_unstable_by(|(_, a), (_, b)| a.cmp(b));
+                TaskList::Mixed(tasks)
+            }
         }
     }
 }

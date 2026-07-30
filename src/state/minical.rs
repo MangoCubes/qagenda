@@ -150,8 +150,10 @@ impl MiniCal {
             }
         });
 
-        let (mut completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) =
-            cal.todos().map(TaskItem::new).partition(|t| t.completed);
+        let (mut completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) = cal
+            .todos()
+            .map(|t| TaskItem::new(t))
+            .partition(|t| t.completed);
         let (mut upcoming_tasks, mut tasks): (Vec<TaskItem>, Vec<TaskItem>) =
             remaining.into_iter().partition(|t| {
                 t.start.as_ref().is_some_and(|s| {
@@ -215,5 +217,13 @@ impl MiniCal {
             .chain(self.upcoming_tasks.clone())
             .map(|e| (e.uid.clone(), e))
             .collect()
+    }
+
+    pub fn incomplete_tasks_count(&self) -> usize {
+        self.tasks.len()
+    }
+
+    pub fn active_events_count(&self) -> usize {
+        self.events.len() + self.recurring_events.len()
     }
 }

@@ -7,7 +7,7 @@ use gtk4::{
 
 use crate::{
     config::keybinds::Action,
-    state::{State, details::Details},
+    state::{State, details::Details, itemlist::ItemList},
     ui::{
         calendar::MonthCalendar,
         state::{Focus, Tab, UIState},
@@ -140,8 +140,8 @@ impl Widget {
         }
 
         let item_count = match &self.ui_state.tab() {
-            Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
-            Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+            Tab::Events { cal, .. } => self.state.get_events_count(cal.as_deref()),
+            Tab::Tasks { cal, past: _ } => self.state.get_tasks_count(cal.as_deref()),
         };
 
         if item_count > 0 && self.ui_state.current_item() >= item_count {
@@ -217,7 +217,7 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    events.iter().enumerate().for_each(|(i, e)| {
+                    events.into_iter().enumerate().for_each(|(i, e)| {
                         let selected = i == current;
                         let item_box = item_box(
                             "agenda-event-item",
@@ -244,7 +244,7 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    tasks.iter().enumerate().for_each(|(i, t)| {
+                    tasks.into_iter().enumerate().for_each(|(i, t)| {
                         let selected = i == current;
                         let item_box = item_box(
                             "agenda-task-item",
@@ -337,8 +337,8 @@ impl Widget {
             Action::Up => {
                 if self.ui_state.focus() == Focus::Agenda {
                     let item_count = match &self.ui_state.tab() {
-                        Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
-                        Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+                        Tab::Events { cal, .. } => self.state.get_events_count(cal.as_deref()),
+                        Tab::Tasks { cal, past: _ } => self.state.get_tasks_count(cal.as_deref()),
                     };
                     self.ui_state.cycle_item(false, item_count);
                 }
@@ -346,8 +346,8 @@ impl Widget {
             Action::Down => {
                 if self.ui_state.focus() == Focus::Agenda {
                     let item_count = match &self.ui_state.tab() {
-                        Tab::Events { cal, .. } => self.state.get_events(cal.as_deref()).len(),
-                        Tab::Tasks { cal, past: _ } => self.state.get_tasks(cal.as_deref()).len(),
+                        Tab::Events { cal, .. } => self.state.get_events_count(cal.as_deref()),
+                        Tab::Tasks { cal, past: _ } => self.state.get_tasks_count(cal.as_deref()),
                     };
                     self.ui_state.cycle_item(true, item_count);
                 }
