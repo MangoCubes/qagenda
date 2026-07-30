@@ -18,10 +18,10 @@ impl<T> ItemList<T> {
         }
     }
 
-    pub fn get(&self, current_item: usize) -> (&String, &T) {
+    pub fn get(&self, current_item: usize) -> Option<(&String, &T)> {
         match self {
-            ItemList::Mixed(v) => (&v[current_item].0, &v[current_item].1),
-            ItemList::Single((n, v)) => (n, &v[current_item]),
+            ItemList::Mixed(v) => v.get(current_item).map(|(n, t)| (n, t)),
+            ItemList::Single((n, v)) => v.get(current_item).map(|t| (n, t)),
         }
     }
 }
