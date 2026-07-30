@@ -18,17 +18,12 @@ impl<T> ItemList<T> {
         }
     }
 
-    pub fn get(&self, current_item: usize) -> &T {
+    pub fn get(&self, current_item: usize) -> (&String, &T) {
         match self {
-            ItemList::Mixed(v) => &v[current_item].1,
-            ItemList::Single(v) => &v.1[current_item],
+            ItemList::Mixed(v) => (&v[current_item].0, &v[current_item].1),
+            ItemList::Single((n, v)) => (n, &v[current_item]),
         }
     }
-}
-
-pub enum ItemListIter<T> {
-    Mixed(IntoIter<T>),
-    Single(IntoIter<T>),
 }
 
 impl<T> IntoIterator for ItemList<T> {

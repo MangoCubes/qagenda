@@ -7,7 +7,7 @@ use gtk4::{
 
 use crate::{
     config::keybinds::Action,
-    state::{State, details::Details, itemlist::ItemList},
+    state::{State, details::Details},
     ui::{
         calendar::MonthCalendar,
         state::{Focus, Tab, UIState},
@@ -299,11 +299,9 @@ impl Widget {
 
     pub fn toggle_task(&self) {
         if let Tab::Tasks { past: _, cal } = self.ui_state.tab() {
-            let task = self
-                .state
-                .get_tasks(cal.as_deref())
-                .get(self.ui_state.current_item())
-                .unwrap();
+            let tasks = self.state.get_tasks(cal.as_deref());
+            let (name, task) = tasks.get(self.ui_state.current_item());
+            self.state.pending.toggle_task(name, task);
         }
     }
 

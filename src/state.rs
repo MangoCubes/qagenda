@@ -30,7 +30,7 @@ use crate::{
 pub struct State {
     cal: HashMap<String, MiniCal>,
     dry_run: bool,
-    pending: Diff,
+    pub pending: Diff,
 }
 
 impl State {
