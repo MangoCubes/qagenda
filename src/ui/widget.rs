@@ -297,6 +297,16 @@ impl Widget {
         self.ui_state.set_selected_cal(new_cal);
     }
 
+    pub fn toggle_task(&self) {
+        if let Tab::Tasks { past: _, cal } = self.ui_state.tab() {
+            let task = self
+                .state
+                .get_tasks(cal.as_deref())
+                .get(self.ui_state.current_item())
+                .unwrap();
+        }
+    }
+
     pub fn handle_action(&self, action: Action) {
         match action {
             Action::SectionUp => {
@@ -352,6 +362,11 @@ impl Widget {
             Action::Expand => {
                 if self.ui_state.focus() == Focus::Agenda {
                     self.ui_state.toggle_details();
+                }
+            }
+            Action::ToggleComplete => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    self.toggle_task();
                 }
             }
             _ => {}

@@ -60,6 +60,10 @@ struct InnerUIState {
     month: u32,
     current_item: usize,
     expanded: bool,
+    // #[serde(skip)]
+    // tasks: Vec<TaskItem>,
+    // #[serde(skip)]
+    // events: Vec<EventItem>,
 }
 
 impl Default for InnerUIState {

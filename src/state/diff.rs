@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use gtk4::gio::ffi::GTaskClass;
+
 use crate::{
-    state::{event::EventItem, minical::MiniCal, task::TaskItem},
+    state::{event::EventItem, task::TaskItem},
     types::UUID,
 };
 
@@ -28,6 +30,21 @@ impl Diff {
             deleted_tasks: HashMap::new(),
         }
     }
+    pub fn prepare_update_task(&mut self, cal: &String, task: &TaskItem) -> &mut TaskItem {
+        &mut self
+            .tasks
+            .get_mut(cal)
+            .unwrap()
+            .entry(task.uid.clone())
+            .or_insert((task.clone(), task.clone()))
+            .1
+    }
+
+    pub fn toggle_task(&mut self, cal: &String, task: &TaskItem) {
+        let r = self.prepare_update_task(cal, task);
+        r.completed = !r.completed;
+    }
+
     pub fn get_changes(&self) -> HashMap<String, Vec<String>> {
         let mut cal_changes: HashMap<String, Vec<String>> = HashMap::new();
         self.new_events.iter().for_each(|(c, es)| {
