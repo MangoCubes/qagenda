@@ -248,24 +248,32 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    tasks.into_iter().enumerate().for_each(|(i, t)| {
-                        let selected = i == current;
-                        let item_box = item_box(
-                            "agenda-task-item",
-                            selected,
-                            &t.duetxt,
-                            t.details.is_some(),
-                            &t.summary,
-                        );
+                    tasks
+                        .into_named_iter()
+                        .enumerate()
+                        .for_each(|(i, (cal_name, t))| {
+                            let selected = i == current;
+                            let completed = self.state.pending.is_task_completed(&cal_name, &t);
+                            let item_box = item_box(
+                                "agenda-task-item",
+                                selected,
+                                &t.duetxt,
+                                t.details.is_some(),
+                                &t.summary,
+                            );
 
-                        if expanded && selected {
-                            if let Some(d) = &t.details {
-                                item_box.append(&details(d));
+                            if completed {
+                                item_box.add_css_class("task-completed");
                             }
-                        }
 
-                        self.agenda.append(&item_box);
-                    });
+                            if expanded && selected {
+                                if let Some(d) = &t.details {
+                                    item_box.append(&details(d));
+                                }
+                            }
+
+                            self.agenda.append(&item_box);
+                        });
                 }
             }
         };

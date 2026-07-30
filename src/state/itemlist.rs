@@ -42,3 +42,16 @@ impl<T> IntoIterator for ItemList<T> {
         }
     }
 }
+
+impl<T> ItemList<T> {
+    pub fn into_named_iter(self) -> IntoIter<(String, T)> {
+        match self {
+            ItemList::Mixed(v) => v.into_iter(),
+            ItemList::Single((name, v)) => v
+                .into_iter()
+                .map(move |item| (name.clone(), item))
+                .collect::<Vec<(String, T)>>()
+                .into_iter(),
+        }
+    }
+}

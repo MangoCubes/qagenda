@@ -79,3 +79,8 @@ label {
 .details-indicator {
 	min-width: 1em;
 }
+
+.task-completed label {
+	text-decoration: line-through;
+	opacity: 0.5;
+}

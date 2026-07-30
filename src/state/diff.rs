@@ -140,4 +140,15 @@ impl Diff {
             || !inner.deleted_events.is_empty()
             || !inner.deleted_tasks.is_empty()
     }
+
+    pub fn is_task_completed(&self, cal: &str, task: &TaskItem) -> bool {
+        self.inner
+            .read()
+            .unwrap()
+            .tasks
+            .get(cal)
+            .and_then(|cal_tasks| cal_tasks.get(&task.uid))
+            .map(|(_, modified)| modified.completed)
+            .unwrap_or(task.completed)
+    }
 }
