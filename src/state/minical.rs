@@ -182,14 +182,18 @@ impl MiniCal {
     }
 
     pub fn active_events(&self) -> Vec<EventItem> {
-        self.events
+        let mut ev: Vec<EventItem> = self
+            .events
             .iter()
             .chain(&self.recurring_events)
             .cloned()
-            .collect()
+            .collect();
+        ev.sort();
+        ev
     }
 
-    pub fn tasks(&self) -> Vec<TaskItem> {
+    /// Because all tasks are sorted by default,
+    pub fn incomplete_tasks(&self) -> Vec<TaskItem> {
         self.tasks.clone()
     }
 

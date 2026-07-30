@@ -133,13 +133,17 @@ impl State {
 
     pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
         let get_all = || {
-            let mut tasks: Vec<TaskItem> = self.cal.values().flat_map(|c| c.tasks()).collect();
+            let mut tasks: Vec<TaskItem> = self
+                .cal
+                .values()
+                .flat_map(|c| c.incomplete_tasks())
+                .collect();
             tasks.sort();
             tasks
         };
         if let Some(name) = cal {
             if let Some(cal) = self.cal.get(name) {
-                cal.tasks()
+                cal.incomplete_tasks()
             } else {
                 get_all()
             }
