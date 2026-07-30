@@ -121,7 +121,18 @@ impl Diff {
     }
 
     pub fn has_changes(&self) -> bool {
-        let inner = self.inner.read().unwrap();
+        let mut inner = self.inner.write().unwrap();
+
+        inner.events.values_mut().for_each(|cal| {
+            cal.retain(|_, (old, new)| old != new);
+        });
+        inner.events.retain(|_, cal| !cal.is_empty());
+
+        inner.tasks.values_mut().for_each(|cal| {
+            cal.retain(|_, (old, new)| old != new);
+        });
+        inner.tasks.retain(|_, cal| !cal.is_empty());
+
         !inner.new_events.is_empty()
             || !inner.new_tasks.is_empty()
             || !inner.events.is_empty()
