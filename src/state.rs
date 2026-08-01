@@ -134,8 +134,8 @@ impl State {
         }
     }
 
-    pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
-        let mut events: Vec<EventItem> = match cal {
+    pub fn get_events(&self, cal: Option<&str>) -> Vec<&EventItem> {
+        let mut events: Vec<&EventItem> = match cal {
             Some(name) => self.cal[name].active_events(),
             None => self.cal.values().flat_map(|c| c.active_events()).collect(),
         };
@@ -143,8 +143,8 @@ impl State {
         events
     }
 
-    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
-        let mut tasks: Vec<TaskItem> = match cal {
+    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<&TaskItem> {
+        let mut tasks: Vec<&TaskItem> = match cal {
             Some(name) => self.cal[name].incomplete_tasks(),
             None => self
                 .cal

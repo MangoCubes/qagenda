@@ -183,20 +183,12 @@ impl MiniCal {
         }
     }
 
-    pub fn active_events(&self) -> Vec<EventItem> {
-        let mut ev: Vec<EventItem> = self
-            .events
-            .iter()
-            .chain(&self.recurring_events)
-            .cloned()
-            .collect();
-        ev.sort();
-        ev
+    pub fn active_events(&self) -> Vec<&EventItem> {
+        self.events.iter().chain(&self.recurring_events).collect()
     }
 
-    /// Because all tasks are sorted by default,
-    pub fn incomplete_tasks(&self) -> Vec<TaskItem> {
-        self.tasks.clone()
+    pub fn incomplete_tasks(&self) -> Vec<&TaskItem> {
+        self.tasks.iter().collect()
     }
 
     pub fn get_events(&self) -> HashMap<UUID, EventItem> {
