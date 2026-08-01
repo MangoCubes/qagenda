@@ -46,6 +46,7 @@ impl InnerDiff {
             deleted_tasks: HashMap::new(),
         }
     }
+
     fn prepare_update_task(&mut self, task: &TaskItem) -> &mut TaskItem {
         &mut self
             .tasks
@@ -59,6 +60,16 @@ impl InnerDiff {
     fn toggle_task(&mut self, task: &TaskItem) {
         let r = self.prepare_update_task(task);
         r.completed = !r.completed;
+    }
+
+    fn prepare_update_event(&mut self, event: &EventItem) -> &mut EventItem {
+        &mut self
+            .events
+            .entry(event.cal.clone())
+            .or_insert(HashMap::new())
+            .entry(event.uid.clone())
+            .or_insert((event.clone(), event.clone()))
+            .1
     }
 
     fn get_changes(&self) -> HashMap<String, Vec<SingleDiff>> {
