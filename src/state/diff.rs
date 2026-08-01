@@ -106,7 +106,6 @@ impl InnerDiff {
             let msgs = es
                 .iter()
                 .map(|(_, (old, new))| old.diff(new))
-                .flatten()
                 .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);

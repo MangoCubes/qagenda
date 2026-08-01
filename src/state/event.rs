@@ -9,7 +9,6 @@ use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
 use crate::types::UUID;
-use crate::ui::readablechanges::ReadableChanges;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventItem {
