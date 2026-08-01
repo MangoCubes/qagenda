@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use icalendar::DatePerhapsTime;
+
 use crate::{
-    state::{event::EventItem, task::TaskItem},
+    state::{details::Details, event::EventItem, task::TaskItem},
     types::UUID,
 };
 
@@ -16,6 +18,21 @@ struct InnerDiff {
     /// Contains UUID of the event to delete, and its corresponding summary
     deleted_events: HashMap<String, Vec<(UUID, String)>>,
     deleted_tasks: HashMap<String, Vec<(UUID, String)>>,
+}
+
+/// Represents differences found in a single calendar task or event. Contains natural language
+/// description of the changes.
+pub enum SingleDiff {
+    Create {
+        summary: String,
+    },
+    Delete {
+        summary: String,
+    },
+    Update {
+        summary: String,
+        changes: Vec<String>,
+    },
 }
 
 impl InnerDiff {
@@ -44,21 +61,25 @@ impl InnerDiff {
         r.completed = !r.completed;
     }
 
-    fn get_changes(&self) -> HashMap<String, Vec<String>> {
-        let mut cal_changes: HashMap<String, Vec<String>> = HashMap::new();
+    fn get_changes(&self) -> HashMap<String, Vec<SingleDiff>> {
+        let mut cal_changes: HashMap<String, Vec<SingleDiff>> = HashMap::new();
         self.new_events.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|e| format!("Create new event \"{}\"", e.summary))
-                .collect::<Vec<String>>();
+                .map(|e| SingleDiff::Create {
+                    summary: format!("Create new event \"{}\"", e.summary),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.new_tasks.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|e| format!("Create new task \"{}\"", e.summary))
-                .collect::<Vec<String>>();
+                .map(|e| SingleDiff::Create {
+                    summary: format!("Create new task \"{}\"", e.summary),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -66,8 +87,7 @@ impl InnerDiff {
             let msgs = es
                 .iter()
                 .map(|(_, (old, new))| old.diff(new))
-                .flatten()
-                .collect::<Vec<String>>();
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -76,23 +96,27 @@ impl InnerDiff {
                 .iter()
                 .map(|(_, (old, new))| old.diff(new))
                 .flatten()
-                .collect::<Vec<String>>();
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.deleted_events.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| format!("Delete event \"{}\"", s))
-                .collect::<Vec<String>>();
+                .map(|(_, s)| SingleDiff::Delete {
+                    summary: format!("Delete event \"{}\"", s),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.deleted_tasks.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| format!("Delete task \"{}\"", s))
-                .collect::<Vec<String>>();
+                .map(|(_, s)| SingleDiff::Delete {
+                    summary: format!("Delete task \"{}\"", s),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -116,7 +140,7 @@ impl Diff {
         self.inner.write().unwrap().toggle_task(task);
     }
 
-    pub fn get_changes(&self) -> HashMap<String, Vec<String>> {
+    pub fn get_changes(&self) -> HashMap<String, Vec<SingleDiff>> {
         self.inner.read().unwrap().get_changes()
     }
 
