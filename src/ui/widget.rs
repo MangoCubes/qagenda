@@ -248,32 +248,29 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    tasks
-                        .into_named_iter()
-                        .enumerate()
-                        .for_each(|(i, (cal_name, t))| {
-                            let selected = i == current;
-                            let completed = self.state.pending.is_task_completed(&cal_name, &t);
-                            let item_box = item_box(
-                                "agenda-task-item",
-                                selected,
-                                &t.duetxt,
-                                t.details.is_some(),
-                                &t.summary,
-                            );
+                    tasks.into_iter().enumerate().for_each(|(i, t)| {
+                        let selected = i == current;
+                        let completed = self.state.pending.is_task_completed(&t);
+                        let item_box = item_box(
+                            "agenda-task-item",
+                            selected,
+                            &t.duetxt,
+                            t.details.is_some(),
+                            &t.summary,
+                        );
 
-                            if completed {
-                                item_box.add_css_class("task-completed");
+                        if completed {
+                            item_box.add_css_class("task-completed");
+                        }
+
+                        if expanded && selected {
+                            if let Some(d) = &t.details {
+                                item_box.append(&details(d));
                             }
+                        }
 
-                            if expanded && selected {
-                                if let Some(d) = &t.details {
-                                    item_box.append(&details(d));
-                                }
-                            }
-
-                            self.agenda.append(&item_box);
-                        });
+                        self.agenda.append(&item_box);
+                    });
                 }
             }
         };
@@ -342,8 +339,8 @@ impl Widget {
     pub fn toggle_task(&self) {
         if let Tab::Tasks { past: _, cal } = self.ui_state.tab() {
             let tasks = self.state.get_tasks(cal.as_deref());
-            if let Some((name, task)) = tasks.get(self.ui_state.current_item()) {
-                self.state.pending.toggle_task(name, task);
+            if let Some(task) = tasks.get(self.ui_state.current_item()) {
+                self.state.pending.toggle_task(task);
             }
         }
     }

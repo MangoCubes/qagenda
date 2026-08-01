@@ -1,7 +1,6 @@
 pub mod details;
 pub mod diff;
 pub mod event;
-pub mod itemlist;
 pub mod minical;
 pub mod task;
 pub mod utils;
@@ -17,13 +16,7 @@ use icalendar::Calendar;
 
 use crate::{
     debug,
-    state::{
-        diff::Diff,
-        event::EventItem,
-        itemlist::{EventList, TaskList},
-        minical::MiniCal,
-        task::TaskItem,
-    },
+    state::{diff::Diff, event::EventItem, minical::MiniCal, task::TaskItem},
 };
 
 #[derive(Clone)]
@@ -41,6 +34,7 @@ impl State {
         max_recurrence_date: u32,
     ) -> Self {
         fn load_calendar(
+            name: String,
             path: PathBuf,
             max_recurrence_count: u32,
             max_recurrence_date: u32,
@@ -65,7 +59,7 @@ impl State {
                 eprintln!("Failed to list files in {:?}", path);
             }
             debug!("Loaded {} components from {:?}", cal.components.len(), path);
-            MiniCal::from_calendar(&cal, max_recurrence_count, max_recurrence_date)
+            MiniCal::from_calendar(name, &cal, max_recurrence_count, max_recurrence_date)
         }
 
         let cals: Vec<DirEntry> = fs::read_dir(&dir)
@@ -100,9 +94,10 @@ impl State {
         let cal: HashMap<String, MiniCal> = cals
             .into_iter()
             .map(|c| {
+                let name = c.file_name().to_string_lossy().to_string();
                 (
-                    c.file_name().to_string_lossy().to_string(),
-                    load_calendar(c.path(), max_recurrence_count, max_recurrence_date),
+                    name.clone(),
+                    load_calendar(name, c.path(), max_recurrence_count, max_recurrence_date),
                 )
             })
             .collect();
@@ -139,35 +134,25 @@ impl State {
         }
     }
 
-    pub fn get_events(&self, cal: Option<&str>) -> EventList {
-        match cal {
-            Some(name) => EventList::Single((name.to_string(), self.cal[name].active_events())),
-            None => {
-                let mut events: Vec<(String, EventItem)> = self
-                    .cal
-                    .iter()
-                    .flat_map(|(name, c)| c.active_events().into_iter().map(|e| (name.clone(), e)))
-                    .collect();
-                events.sort_unstable_by(|(_, a), (_, b)| a.cmp(b));
-                EventList::Mixed(events)
-            }
-        }
+    pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
+        let mut events: Vec<EventItem> = match cal {
+            Some(name) => self.cal[name].active_events(),
+            None => self.cal.values().flat_map(|c| c.active_events()).collect(),
+        };
+        events.sort_unstable();
+        events
     }
 
-    pub fn get_tasks(&self, cal: Option<&str>) -> TaskList {
-        match cal {
-            Some(name) => TaskList::Single((name.to_string(), self.cal[name].incomplete_tasks())),
-            None => {
-                let mut tasks: Vec<(String, TaskItem)> = self
-                    .cal
-                    .iter()
-                    .flat_map(|(name, c)| {
-                        c.incomplete_tasks().into_iter().map(|e| (name.clone(), e))
-                    })
-                    .collect();
-                tasks.sort_unstable_by(|(_, a), (_, b)| a.cmp(b));
-                TaskList::Mixed(tasks)
-            }
-        }
+    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
+        let mut tasks: Vec<TaskItem> = match cal {
+            Some(name) => self.cal[name].incomplete_tasks(),
+            None => self
+                .cal
+                .values()
+                .flat_map(|c| c.incomplete_tasks())
+                .collect(),
+        };
+        tasks.sort_unstable();
+        tasks
     }
 }

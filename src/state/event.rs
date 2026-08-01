@@ -11,6 +11,7 @@ use crate::types::UUID;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventItem {
+    pub cal: String,
     pub summary: String,
     pub duration: String,
     pub start: Option<DatePerhapsTime>,
@@ -21,6 +22,7 @@ pub struct EventItem {
 
 impl EventItem {
     fn new(
+        cal: String,
         uid: String,
         summary: String,
         start: Option<DatePerhapsTime>,
@@ -65,6 +67,7 @@ impl EventItem {
             (None, None) => "No time set".to_string(),
         };
         Self {
+            cal,
             uid,
             summary,
             duration,
@@ -74,8 +77,9 @@ impl EventItem {
         }
     }
 
-    pub fn from(event: &Event) -> Self {
+    pub fn from(cal: String, event: &Event) -> Self {
         Self::new(
+            cal,
             event
                 .property_value("UID")
                 .map(|s| s.to_string())
@@ -91,11 +95,13 @@ impl EventItem {
     }
 
     pub fn with_custom_time(
+        cal: String,
         event: &Event,
         start: DatePerhapsTime,
         end: Option<DatePerhapsTime>,
     ) -> Self {
         Self::new(
+            cal,
             event
                 .property_value("UID")
                 .map(|s| s.to_string())

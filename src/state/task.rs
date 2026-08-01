@@ -10,6 +10,7 @@ use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_n
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskItem {
+    pub cal: String,
     pub summary: String,
     pub completed: bool,
     /// True when the task has a start date that is in the future
@@ -22,7 +23,7 @@ pub struct TaskItem {
 }
 
 impl TaskItem {
-    pub fn new(task: &Todo) -> Self {
+    pub fn new(cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
         let summary = task.get_summary().unwrap_or("Untitled Task").to_string();
@@ -40,6 +41,7 @@ impl TaskItem {
             }
         });
         Self {
+            cal,
             completed,
             upcoming,
             summary,

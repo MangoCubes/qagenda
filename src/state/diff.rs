@@ -29,18 +29,18 @@ impl InnerDiff {
             deleted_tasks: HashMap::new(),
         }
     }
-    fn prepare_update_task(&mut self, cal: &String, task: &TaskItem) -> &mut TaskItem {
+    fn prepare_update_task(&mut self, task: &TaskItem) -> &mut TaskItem {
         &mut self
             .tasks
-            .entry(cal.clone())
+            .entry(task.cal.clone())
             .or_insert(HashMap::new())
             .entry(task.uid.clone())
             .or_insert((task.clone(), task.clone()))
             .1
     }
 
-    fn toggle_task(&mut self, cal: &String, task: &TaskItem) {
-        let r = self.prepare_update_task(cal, task);
+    fn toggle_task(&mut self, task: &TaskItem) {
+        let r = self.prepare_update_task(task);
         r.completed = !r.completed;
     }
 
@@ -112,8 +112,8 @@ impl Diff {
         }
     }
 
-    pub fn toggle_task(&self, cal: &String, task: &TaskItem) {
-        self.inner.write().unwrap().toggle_task(cal, task);
+    pub fn toggle_task(&self, task: &TaskItem) {
+        self.inner.write().unwrap().toggle_task(task);
     }
 
     pub fn get_changes(&self) -> HashMap<String, Vec<String>> {
@@ -141,12 +141,12 @@ impl Diff {
             || !inner.deleted_tasks.is_empty()
     }
 
-    pub fn is_task_completed(&self, cal: &str, task: &TaskItem) -> bool {
+    pub fn is_task_completed(&self, task: &TaskItem) -> bool {
         self.inner
             .read()
             .unwrap()
             .tasks
-            .get(cal)
+            .get(&task.cal)
             .and_then(|cal_tasks| cal_tasks.get(&task.uid))
             .map(|(_, modified)| modified.completed)
             .unwrap_or(task.completed)
