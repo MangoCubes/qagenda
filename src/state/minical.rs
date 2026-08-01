@@ -60,7 +60,6 @@ impl MiniCal {
             if event.property_value("RRULE").is_some() {
                 match event.get_recurrence() {
                     Ok(rrule) => {
-                        events.push(EventItem::from(cal_name.clone(), event));
                         let result = {
                             let after = rrule.after(start_window);
                             let bounded = match end_window {
@@ -144,7 +143,8 @@ impl MiniCal {
                         }
                     }
                 }
-            } else if is_past_event(event) {
+            }
+            if is_past_event(event) {
                 past_events.push(EventItem::from(cal_name.clone(), event));
             } else {
                 events.push(EventItem::from(cal_name.clone(), event));
