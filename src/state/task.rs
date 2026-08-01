@@ -7,6 +7,7 @@ use chrono::NaiveDateTime;
 
 use crate::state::details::Details;
 use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_naive_date};
+use crate::ui::readablechanges::ReadableChanges;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskItem {
@@ -60,20 +61,27 @@ impl TaskItem {
     }
 
     /// [`other`] is the new task
-    pub fn diff(&self, other: &TaskItem) -> Vec<String> {
+    pub fn diff(&self, other: &TaskItem) -> ReadableChanges {
         // For now, handling change in completed status only
-        let mut diffs = vec![];
+        let mut changes = ReadableChanges {
+            summary: (if self.summary != other.summary {
+                format!("{} (Renamed from \"{}\")", other.summary, self.summary)
+            } else {
+                self.summary.clone()
+            }),
+            changes: vec![],
+        };
         fn completed(val: bool) -> &'static str {
             if val { "complete" } else { "incomplete" }
         }
         if self.completed != other.completed {
-            diffs.push(format!(
+            changes.changes.push(format!(
                 "Task {} -> {}",
                 completed(self.completed),
                 completed(other.completed),
             ));
         }
-        diffs
+        changes
     }
 }
 
