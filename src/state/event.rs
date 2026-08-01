@@ -8,6 +8,7 @@ use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
 use crate::types::UUID;
+use crate::ui::readablechanges::ReadableChanges;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventItem {
@@ -129,8 +130,38 @@ impl EventItem {
         started && not_ended
     }
 
-    pub fn diff(&self, new: &EventItem) -> Vec<String> {
-        todo!()
+    pub fn diff(&self, other: &EventItem) -> ReadableChanges {
+        let mut changes = ReadableChanges {
+            summary: (if self.summary != other.summary {
+                format!("{} (Renamed from \"{}\")", other.summary, self.summary)
+            } else {
+                self.summary.clone()
+            }),
+            changes: vec![],
+        };
+        if self.start != other.start {
+            let old = self
+                .start
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            let new = other
+                .start
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            changes.changes.push(format!("Start {} -> {}", old, new));
+        }
+        if self.end != other.end {
+            let old = self
+                .end
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            let new = other
+                .end
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            changes.changes.push(format!("End {} -> {}", old, new));
+        }
+        changes
     }
 }
 
