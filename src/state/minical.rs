@@ -14,11 +14,9 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct MiniCal {
+    /// Also contains first occurrence of recurring events so that [`MiniCal::past_events`] +
+    /// [`MiniCal::events`] = all events without duplicates
     pub events: Vec<EventItem>,
-    /// Contains the first occurrence only
-    /// This field ensures that [`MiniCal::events`] + [`MiniCal::init_events`] + [`MiniCal::past_events`] = all events without duplicates
-    /// We can't use UUID to identify events uniquely in [`MiniCal::recurring_events`]
-    pub init_events: Vec<EventItem>,
     pub recurring_events: Vec<EventItem>,
     /// If the last occurrence of a recurring event is past the current date, it goes here as well
     pub past_events: Vec<EventItem>,
@@ -36,8 +34,7 @@ impl MiniCal {
         max_recurrence_date: u32,
     ) -> Self {
         let today = Local::now().date_naive();
-        let (mut events, mut init_events, mut recurring_events, mut past_events) =
-            (vec![], vec![], vec![], vec![]);
+        let (mut events, mut recurring_events, mut past_events) = (vec![], vec![], vec![]);
         let start_window = Tz::LOCAL
             .from_local_datetime(&today.and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap()))
             .single()
@@ -63,7 +60,7 @@ impl MiniCal {
             if event.property_value("RRULE").is_some() {
                 match event.get_recurrence() {
                     Ok(rrule) => {
-                        init_events.push(EventItem::from(cal_name.clone(), event));
+                        events.push(EventItem::from(cal_name.clone(), event));
                         let result = {
                             let after = rrule.after(start_window);
                             let bounded = match end_window {
@@ -80,7 +77,8 @@ impl MiniCal {
                                 Some(end) => {
                                     let Some(start) = event.get_start() else {
                                         if is_past_event(event) {
-                                            past_events.push(EventItem::from(cal_name.clone(), event));
+                                            past_events
+                                                .push(EventItem::from(cal_name.clone(), event));
                                         } else {
                                             events.push(EventItem::from(cal_name.clone(), event));
                                         };
@@ -177,7 +175,6 @@ impl MiniCal {
 
         Self {
             events,
-            init_events,
             recurring_events,
             past_events,
             tasks,
@@ -206,7 +203,6 @@ impl MiniCal {
         self.events
             .clone()
             .into_iter()
-            .chain(self.init_events.clone())
             .chain(self.past_events.clone())
             .map(|e| (e.uid.clone(), e))
             .collect()
