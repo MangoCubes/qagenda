@@ -23,15 +23,8 @@ pub struct EventItem {
 }
 
 impl EventItem {
-    fn new(
-        cal: String,
-        uid: String,
-        summary: String,
-        start: Option<DatePerhapsTime>,
-        end: Option<DatePerhapsTime>,
-        details: Option<Details>,
-    ) -> Self {
-        let duration = match (&start, &end) {
+    fn gen_duration(start: &Option<DatePerhapsTime>, end: &Option<DatePerhapsTime>) -> String {
+        match (start, end) {
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
                 if get_naive_date(&s) == get_naive_date(&e) {
                     // Same day, different end time
@@ -67,12 +60,21 @@ impl EventItem {
             (Some(s), None) => format!("Since {}", format_date_perhaps_time(&s)),
             (None, Some(e)) => format!("Until {}", format_date_perhaps_time(&e)),
             (None, None) => "No time set".to_string(),
-        };
+        }
+    }
+    fn new(
+        cal: String,
+        uid: String,
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+        details: Option<Details>,
+    ) -> Self {
         Self {
             cal,
             uid,
             summary,
-            duration,
+            duration: Self::gen_duration(&start, &end),
             start,
             end,
             details,
@@ -163,6 +165,10 @@ impl EventItem {
             }),
             changes,
         }
+    }
+
+    pub fn rebuild(&mut self) {
+        self.duration = Self::gen_duration(&self.start, &self.end);
     }
 }
 
