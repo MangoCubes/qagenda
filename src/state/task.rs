@@ -24,15 +24,21 @@ pub struct TaskItem {
 }
 
 impl TaskItem {
+    fn gen_duetxt(due: &Option<DatePerhapsTime>) -> String {
+        match due {
+            Some(d) => format_date_perhaps_time(d),
+            None => "No due date".to_string(),
+        }
+    }
+    pub fn rebuild(&mut self) {
+        self.duetxt = Self::gen_duetxt(&self.due);
+    }
     pub fn new(cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
         let summary = task.get_summary().unwrap_or("Untitled Task").to_string();
         let due = task.get_due();
-        let duetxt = match &due {
-            Some(d) => format_date_perhaps_time(d),
-            None => "No due date".to_string(),
-        };
+        let duetxt = Self::gen_duetxt(&due);
         let start = task.get_start();
         let upcoming = start.as_ref().is_some_and(|s| {
             let today = Local::now().date_naive();
