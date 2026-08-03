@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use icalendar::DatePerhapsTime;
-
 use crate::{
-    state::{details::Details, event::EventItem, task::TaskItem},
+    state::{event::EventItem, task::TaskItem},
     types::UUID,
 };
 

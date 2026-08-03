@@ -2,12 +2,12 @@ use std::iter;
 
 use gtk4::{
     Align, Box, Grid, Label, Orientation,
-    prelude::{BoxExt, WidgetExt},
+    prelude::{BoxExt, GridExt, WidgetExt},
 };
 
 use crate::{
     config::keybinds::Action,
-    state::{State, details::Details},
+    state::{State, details::Details, diff::SingleDiff},
     ui::{
         calendar::MonthCalendar,
         state::{Focus, Tab, UIState},
@@ -293,13 +293,33 @@ impl Widget {
                 cal.add_css_class("section-title");
                 self.agenda.append(&cal);
 
+                let grid = Grid::new();
+
                 msgs.iter()
-                    .map(|msg| {
-                        let item = Label::new(Some(&format!("  - {}", msg)));
-                        item.set_halign(Align::Start);
-                        item
+                    .flat_map(|msg| match msg {
+                        SingleDiff::Create { summary } | SingleDiff::Delete { summary } => {
+                            vec![("-", summary.as_str())]
+                        }
+                        SingleDiff::Update { summary, changes } => {
+                            iter::once(("-", summary.as_str()))
+                                .chain(changes.iter().map(|c| ("", c.as_str())))
+                                .collect()
+                        }
                     })
-                    .for_each(|l| self.agenda.append(&l));
+                    .enumerate()
+                    .for_each(|(row, (bullet, text))| {
+                        let bullet = Label::new(Some(bullet));
+                        bullet.set_halign(Align::Center);
+                        bullet.add_css_class("item-bullet");
+                        let changes = Label::new(Some(text));
+                        changes.set_halign(Align::Start);
+                        changes.add_css_class("item-changes");
+
+                        grid.attach(&bullet, 0, row as i32, 1, 1);
+                        grid.attach(&changes, 1, row as i32, 1, 1);
+                    });
+
+                self.agenda.append(&grid);
             });
         let query = Label::new(Some("Write changes? (y/n/esc)"));
         query.set_halign(Align::Start);

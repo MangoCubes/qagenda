@@ -84,3 +84,7 @@ label {
 	text-decoration: line-through;
 	opacity: 0.5;
 }
+
+.item-bullet {
+	padding: 0px 6px;
+}
