@@ -1,8 +1,11 @@
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 
+use crate::ui::state::editor::{EditItem, EditorState};
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
+
+pub mod editor;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -48,6 +51,14 @@ pub enum Focus {
     #[default]
     Agenda,
     Calendar,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Mode {
+    #[default]
+    Browse,
+    ConfirmExit,
+    Edit(EditorState),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
