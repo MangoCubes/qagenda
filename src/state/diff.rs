@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use icalendar::DatePerhapsTime;
+
+use crate::state::details::Details;
 use crate::{
     state::{event::EventItem, task::TaskItem},
     types::UUID,
@@ -182,5 +185,39 @@ impl Diff {
             .and_then(|cal_tasks| cal_tasks.get(&task.uid))
             .map(|(_, modified)| modified.completed)
             .unwrap_or(task.completed)
+    }
+
+    pub fn update_event(
+        &self,
+        event: &EventItem,
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut inner = self.inner.write().unwrap();
+        let target = inner.prepare_update_event(event);
+        target.summary = summary;
+        target.start = start;
+        target.end = end;
+        target.details = Details::new(location, description);
+        target.rebuild();
+    }
+
+    pub fn update_task(
+        &self,
+        task: &TaskItem,
+        summary: String,
+        due: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut inner = self.inner.write().unwrap();
+        let target = inner.prepare_update_task(task);
+        target.summary = summary;
+        target.due = due;
+        target.details = Details::new(location, description);
+        target.rebuild();
     }
 }
