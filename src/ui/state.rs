@@ -72,7 +72,7 @@ struct InnerUIState {
     current_item: usize,
     expanded: bool,
     #[serde(skip)]
-    confirming_exit: bool,
+    mode: Mode,
 }
 
 impl Default for InnerUIState {
@@ -86,7 +86,7 @@ impl Default for InnerUIState {
             month: now.month(),
             current_item: 0,
             expanded: false,
-            confirming_exit: false,
+            mode: Mode::Browse,
         }
     }
 }
@@ -239,11 +239,65 @@ impl UIState {
         guard.expanded = !guard.expanded;
     }
 
+    pub fn mode(&self) -> Mode {
+        self.inner.read().unwrap().mode.clone()
+    }
+
+    pub fn set_mode(&self, mode: Mode) {
+        self.inner.write().unwrap().mode = mode;
+    }
+
     pub fn confirming_exit(&self) -> bool {
-        self.inner.read().unwrap().confirming_exit
+        matches!(self.mode(), Mode::ConfirmExit)
     }
 
     pub fn set_confirming_exit(&self, exit: bool) {
-        self.inner.write().unwrap().confirming_exit = exit;
+        let mut guard = self.inner.write().unwrap();
+        guard.mode = if exit {
+            Mode::ConfirmExit
+        } else {
+            Mode::Browse
+        };
+    }
+
+    pub fn is_editing(&self) -> bool {
+        matches!(self.mode(), Mode::Edit(_))
+    }
+
+    pub fn start_edit(&self, item: EditItem) {
+        let mut guard = self.inner.write().unwrap();
+        guard.mode = Mode::Edit(EditorState::new(item));
+    }
+
+    pub fn editor_state(&self) -> Option<EditorState> {
+        match &self.inner.read().unwrap().mode {
+            Mode::Edit(editor) => Some(editor.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn editor_move_field(&self, down: bool) {
+        let mut guard = self.inner.write().unwrap();
+        if let Mode::Edit(editor) = &mut guard.mode {
+            editor.selected_field.0 = editor.selected_field.0.next(down);
+        }
+    }
+
+    pub fn editor_write(&self) {
+        let mut guard = self.inner.write().unwrap();
+        if let Mode::Edit(editor) = &mut guard.mode {
+            editor.selected_field.1 = true;
+        }
+    }
+
+    pub fn editor_stop_write(&self, value: String, confirm: bool) {
+        let mut guard = self.inner.write().unwrap();
+        if let Mode::Edit(editor) = &mut guard.mode {
+            if confirm {
+                editor.set_field_value(value);
+            };
+            editor.selected_field.1 = false;
+            guard.mode = Mode::Browse;
+        }
     }
 }

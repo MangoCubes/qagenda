@@ -16,6 +16,14 @@ pub enum EditorField {
 }
 
 impl EditorField {
+    pub const ALL: [EditorField; 5] = [
+        EditorField::Summary,
+        EditorField::Start,
+        EditorField::End,
+        EditorField::Location,
+        EditorField::Description,
+    ];
+
     pub fn label(&self, is_event: bool) -> &'static str {
         match self {
             EditorField::Summary => "Summary",
@@ -30,6 +38,19 @@ impl EditorField {
             EditorField::Location => "Location",
             EditorField::Description => "Description",
         }
+    }
+
+    pub fn next(&self, down: bool) -> Self {
+        let len = Self::ALL.len();
+        let idx = Self::ALL.iter().position(|f| f == self).unwrap();
+        let next_idx = if down {
+            (idx + 1) % len
+        } else if idx == 0 {
+            len - 1
+        } else {
+            idx - 1
+        };
+        Self::ALL[next_idx]
     }
 }
 
@@ -84,6 +105,7 @@ impl EditorState {
             item,
         }
     }
+
     pub fn event(e: EventItem) -> Self {
         Self {
             selected_field: (EditorField::Summary, false),
@@ -104,8 +126,12 @@ impl EditorState {
         }
     }
 
-    pub fn get_field_value(&self) -> &str {
-        match self.selected_field.0 {
+    pub fn is_editing(&self) -> bool {
+        self.selected_field.1
+    }
+
+    pub fn get_field_value(&self, field: EditorField) -> &str {
+        match field {
             EditorField::Summary => &self.summary,
             EditorField::Start => &self.start,
             EditorField::End => &self.end,
