@@ -96,5 +96,10 @@ pub fn parse_from_str(input: &str) -> Option<DatePerhapsTime> {
     ["%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M", "%Y/%m/%d", "%Y-%m-%d"]
         .into_iter()
         .find_map(|fmt| NaiveDateTime::parse_from_str(input.trim(), fmt).ok())
-        .map(Into::into)
+        .map(|ndt| {
+            DatePerhapsTime::DateTime(CalendarDateTime::WithTimezone {
+                date_time: ndt,
+                tzid: iana_time_zone::get_timezone().unwrap_or_default(),
+            })
+        })
 }
