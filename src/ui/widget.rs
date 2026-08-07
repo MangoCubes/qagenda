@@ -233,6 +233,8 @@ impl Widget {
                 } else {
                     events.into_iter().enumerate().for_each(|(i, e)| {
                         let selected = i == current;
+                        let modified = self.state.pending.get_event(e);
+                        let e = modified.as_ref().unwrap_or(e);
                         let item_box = item_box(
                             "agenda-event-item",
                             selected,
@@ -258,7 +260,9 @@ impl Widget {
                 } else {
                     tasks.into_iter().enumerate().for_each(|(i, t)| {
                         let selected = i == current;
-                        let completed = self.state.pending.is_task_completed(&t);
+                        let modified = self.state.pending.get_task(t);
+                        let t = modified.as_ref().unwrap_or(t);
+                        let completed = self.state.pending.is_task_completed(t);
                         let item_box = item_box(
                             "agenda-task-item",
                             selected,
@@ -338,13 +342,23 @@ impl Widget {
             Tab::Events { cal, .. } => {
                 let events = self.state.get_events(cal.as_deref());
                 if let Some(event) = events.get(current) {
-                    self.ui_state.start_edit(EditItem::Event((*event).clone()));
+                    let item = self
+                        .state
+                        .pending
+                        .get_event(event)
+                        .unwrap_or_else(|| (*event).clone());
+                    self.ui_state.start_edit(EditItem::Event(item));
                 }
             }
             Tab::Tasks { cal, .. } => {
                 let tasks = self.state.get_tasks(cal.as_deref());
                 if let Some(task) = tasks.get(current) {
-                    self.ui_state.start_edit(EditItem::Task((*task).clone()));
+                    let item = self
+                        .state
+                        .pending
+                        .get_task(task)
+                        .unwrap_or_else(|| (*task).clone());
+                    self.ui_state.start_edit(EditItem::Task(item));
                 }
             }
         }

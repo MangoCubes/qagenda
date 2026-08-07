@@ -187,6 +187,26 @@ impl Diff {
             .unwrap_or(task.completed)
     }
 
+    pub fn get_event(&self, event: &EventItem) -> Option<EventItem> {
+        self.inner.read().ok().and_then(|guard| {
+            guard
+                .events
+                .get(&event.cal)?
+                .get(&event.uid)
+                .map(|(_, modified)| modified.clone())
+        })
+    }
+
+    pub fn get_task(&self, task: &TaskItem) -> Option<TaskItem> {
+        self.inner.read().ok().and_then(|guard| {
+            guard
+                .tasks
+                .get(&task.cal)?
+                .get(&task.uid)
+                .map(|(_, modified)| modified.clone())
+        })
+    }
+
     pub fn update_event(
         &self,
         event: &EventItem,
