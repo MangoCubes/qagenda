@@ -95,13 +95,14 @@ impl EditorState {
     }
 
     pub fn event(e: EventItem) -> Self {
+        let (location, desc) = e.details.to_strs();
         Self {
             selected_field: (EditorField::Summary, false),
             summary: e.summary.clone(),
             start: e.start.as_ref().map_or("".to_string(), dpt_to_str),
             end: e.end.as_ref().map_or("".to_string(), dpt_to_str),
-            location: e.details.location.clone().unwrap_or_default(),
-            desc: e.details.description.clone().unwrap_or_default(),
+            location,
+            desc,
             item: EditItem::Event(e),
         }
     }

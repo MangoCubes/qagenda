@@ -133,7 +133,7 @@ impl EventItem {
     }
 
     pub fn diff(&self, other: &EventItem) -> SingleDiff {
-        let mut changes = vec![];
+        let mut changes = self.details.diff(&other.details);
         if self.start != other.start {
             let old = self
                 .start
