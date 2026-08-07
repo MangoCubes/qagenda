@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{config::keybinds::KeyBinds, ui::state::UIState};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Anchor {
     #[default]
@@ -21,7 +21,7 @@ pub enum Anchor {
     Center,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Config {
     pub dir: PathBuf,
@@ -46,6 +46,14 @@ pub struct Config {
     /// hovering your mouse over it.
     #[serde(rename = "allowUnfocused")]
     pub allow_unfocused: bool,
+    /// Command to run when the user exits the program without writing anything into the disk
+    /// (Inludes both cases where the user exits without changes, and when the user makes changes,
+    /// then discards them)
+    #[serde(rename = "onClose")]
+    pub on_close: Option<String>,
+    /// Command to run when the user confirms writing changes on exit
+    #[serde(rename = "onWrite")]
+    pub on_write: Option<String>,
 }
 
 impl Default for Config {
@@ -64,6 +72,8 @@ impl Default for Config {
             max_recurrence_count: 3,
             max_recurrence_date: 30,
             allow_unfocused: false,
+            on_close: None,
+            on_write: None,
         }
     }
 }

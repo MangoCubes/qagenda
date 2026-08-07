@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use chrono::Local;
 use gtk4::{
     Application, ApplicationWindow, Box, CssProvider, EventControllerKey, Label, Orientation,
@@ -11,6 +13,7 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 use crate::{
     config::{Config, keybinds::Action},
+    error,
     state::State,
     ui::{state::Mode, widget::Widget},
 };
@@ -74,7 +77,15 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let window2 = window.clone();
     let keybinds = config.keybinds.clone();
     let widget2 = widget.clone();
+    let on_close = config.on_close.clone();
+    let on_write = config.on_write.clone();
 
+    fn run_cmd(cmd: &String) {
+        match Command::new("sh").arg("-c").arg(cmd).spawn() {
+            Ok(child) => println!("Running child process {}.", child.id()),
+            Err(err) => error!("Failed to run command: {}", err),
+        };
+    }
     ckey.connect_key_pressed(move |_, keyval, _, state| match widget2.ui_state.mode() {
         Mode::Edit(editor) => {
             if editor.is_editing() {
@@ -126,11 +137,18 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                 match action {
                     Action::Yes => {
                         // TODO: write changes
+                        if let Some(cmd) = &on_write {
+                            run_cmd(cmd);
+                        }
+
                         window2.set_visible(false);
                         window2.set_sensitive(false);
                         app2.quit();
                     }
                     Action::No => {
+                        if let Some(cmd) = &on_close {
+                            run_cmd(cmd);
+                        }
                         window2.set_visible(false);
                         window2.set_sensitive(false);
                         app2.quit();
@@ -151,6 +169,9 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                         widget2.ui_state.set_confirming_exit(true);
                         widget2.update();
                     } else {
+                        if let Some(cmd) = &on_close {
+                            run_cmd(cmd);
+                        }
                         window2.set_visible(false);
                         window2.set_sensitive(false);
                         app2.quit();
