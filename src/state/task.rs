@@ -6,6 +6,7 @@ use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
 use chrono::NaiveDateTime;
 
 use crate::state::details::Details;
+use crate::state::diff::SingleDiff;
 use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_naive_date};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,15 +24,21 @@ pub struct TaskItem {
 }
 
 impl TaskItem {
+    fn gen_duetxt(due: &Option<DatePerhapsTime>) -> String {
+        match due {
+            Some(d) => format_date_perhaps_time(d),
+            None => "No due date".to_string(),
+        }
+    }
+    pub fn rebuild(&mut self) {
+        self.duetxt = Self::gen_duetxt(&self.due);
+    }
     pub fn new(cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
         let summary = task.get_summary().unwrap_or("Untitled Task").to_string();
         let due = task.get_due();
-        let duetxt = match &due {
-            Some(d) => format_date_perhaps_time(d),
-            None => "No due date".to_string(),
-        };
+        let duetxt = Self::gen_duetxt(&due);
         let start = task.get_start();
         let upcoming = start.as_ref().is_some_and(|s| {
             let today = Local::now().date_naive();
@@ -60,20 +67,27 @@ impl TaskItem {
     }
 
     /// [`other`] is the new task
-    pub fn diff(&self, other: &TaskItem) -> Vec<String> {
+    pub fn diff(&self, other: &TaskItem) -> SingleDiff {
         // For now, handling change in completed status only
-        let mut diffs = vec![];
+        let mut changes = vec![];
         fn completed(val: bool) -> &'static str {
             if val { "complete" } else { "incomplete" }
         }
         if self.completed != other.completed {
-            diffs.push(format!(
+            changes.push(format!(
                 "Task {} -> {}",
                 completed(self.completed),
                 completed(other.completed),
             ));
         }
-        diffs
+        SingleDiff::Update {
+            summary: (if self.summary != other.summary {
+                format!("{} (Renamed from \"{}\")", other.summary, self.summary)
+            } else {
+                self.summary.clone()
+            }),
+            changes,
+        }
     }
 }
 

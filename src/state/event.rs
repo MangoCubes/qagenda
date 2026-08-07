@@ -4,6 +4,7 @@ use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
 
 use crate::state::details::Details;
+use crate::state::diff::SingleDiff;
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
@@ -21,15 +22,8 @@ pub struct EventItem {
 }
 
 impl EventItem {
-    fn new(
-        cal: String,
-        uid: String,
-        summary: String,
-        start: Option<DatePerhapsTime>,
-        end: Option<DatePerhapsTime>,
-        details: Option<Details>,
-    ) -> Self {
-        let duration = match (&start, &end) {
+    fn gen_duration(start: &Option<DatePerhapsTime>, end: &Option<DatePerhapsTime>) -> String {
+        match (start, end) {
             (Some(DatePerhapsTime::DateTime(s)), Some(DatePerhapsTime::DateTime(e))) => {
                 if get_naive_date(&s) == get_naive_date(&e) {
                     // Same day, different end time
@@ -65,12 +59,21 @@ impl EventItem {
             (Some(s), None) => format!("Since {}", format_date_perhaps_time(&s)),
             (None, Some(e)) => format!("Until {}", format_date_perhaps_time(&e)),
             (None, None) => "No time set".to_string(),
-        };
+        }
+    }
+    fn new(
+        cal: String,
+        uid: String,
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+        details: Option<Details>,
+    ) -> Self {
         Self {
             cal,
             uid,
             summary,
-            duration,
+            duration: Self::gen_duration(&start, &end),
             start,
             end,
             details,
@@ -129,8 +132,42 @@ impl EventItem {
         started && not_ended
     }
 
-    pub fn diff(&self, new: &EventItem) -> Vec<String> {
-        todo!()
+    pub fn diff(&self, other: &EventItem) -> SingleDiff {
+        let mut changes = vec![];
+        if self.start != other.start {
+            let old = self
+                .start
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            let new = other
+                .start
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            changes.push(format!("Start {} -> {}", old, new));
+        }
+        if self.end != other.end {
+            let old = self
+                .end
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            let new = other
+                .end
+                .as_ref()
+                .map_or("(none)".to_string(), |s| format_date_perhaps_time(s));
+            changes.push(format!("End {} -> {}", old, new));
+        }
+        SingleDiff::Update {
+            summary: (if self.summary != other.summary {
+                format!("{} (Renamed from \"{}\")", other.summary, self.summary)
+            } else {
+                self.summary.clone()
+            }),
+            changes,
+        }
+    }
+
+    pub fn rebuild(&mut self) {
+        self.duration = Self::gen_duration(&self.start, &self.end);
     }
 }
 

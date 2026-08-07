@@ -1,16 +1,19 @@
 use std::iter;
 
 use gtk4::{
-    Align, Box, Grid, Label, Orientation,
-    prelude::{BoxExt, WidgetExt},
+    Align, Box, Entry, Grid, Label, Orientation,
+    prelude::{BoxExt, EditableExt, EntryExt, GridExt, WidgetExt},
 };
 
 use crate::{
     config::keybinds::Action,
-    state::{State, details::Details},
+    state::{State, details::Details, diff::SingleDiff, utils::parse_from_str},
     ui::{
         calendar::MonthCalendar,
-        state::{Focus, Tab, UIState},
+        state::{
+            Focus, Mode, Tab, UIState,
+            editor::{EditItem, EditorField},
+        },
     },
 };
 
@@ -85,9 +88,16 @@ impl Widget {
     }
 
     pub fn update(&self) {
-        if self.ui_state.confirming_exit() {
-            self.show_confirm_exit();
-            return;
+        match self.ui_state.mode() {
+            Mode::ConfirmExit => {
+                self.show_confirm_exit();
+                return;
+            }
+            Mode::Edit(_) => {
+                self.show_editor();
+                return;
+            }
+            Mode::Browse => {}
         }
         match self.ui_state.focus() {
             Focus::Calendar => {
@@ -293,17 +303,168 @@ impl Widget {
                 cal.add_css_class("section-title");
                 self.agenda.append(&cal);
 
+                let grid = Grid::new();
+
                 msgs.iter()
-                    .map(|msg| {
-                        let item = Label::new(Some(&format!("  - {}", msg)));
-                        item.set_halign(Align::Start);
-                        item
+                    .flat_map(|msg| match msg {
+                        SingleDiff::Create { summary } | SingleDiff::Delete { summary } => {
+                            vec![("-", summary.as_str())]
+                        }
+                        SingleDiff::Update { summary, changes } => {
+                            iter::once(("-", summary.as_str()))
+                                .chain(changes.iter().map(|c| ("", c.as_str())))
+                                .collect()
+                        }
                     })
-                    .for_each(|l| self.agenda.append(&l));
+                    .enumerate()
+                    .for_each(|(row, (bullet, text))| {
+                        let bullet = Label::new(Some(bullet));
+                        bullet.set_halign(Align::Center);
+                        bullet.add_css_class("item-bullet");
+                        let changes = Label::new(Some(text));
+                        changes.set_halign(Align::Start);
+                        changes.add_css_class("item-changes");
+
+                        grid.attach(&bullet, 0, row as i32, 1, 1);
+                        grid.attach(&changes, 1, row as i32, 1, 1);
+                    });
+
+                self.agenda.append(&grid);
             });
         let query = Label::new(Some("Write changes? (y/n/esc)"));
         query.set_halign(Align::Start);
         self.agenda.append(&query);
+    }
+
+    pub fn start_editing_selected(&self) {
+        let current = self.ui_state.current_item();
+        match self.ui_state.tab() {
+            Tab::Events { cal, .. } => {
+                let events = self.state.get_events(cal.as_deref());
+                if let Some(event) = events.get(current) {
+                    self.ui_state.start_edit(EditItem::Event((*event).clone()));
+                }
+            }
+            Tab::Tasks { cal, .. } => {
+                let tasks = self.state.get_tasks(cal.as_deref());
+                if let Some(task) = tasks.get(current) {
+                    self.ui_state.start_edit(EditItem::Task((*task).clone()));
+                }
+            }
+        }
+    }
+
+    pub fn save_item(&self, orig: &EditItem) {
+        let Some(editor) = self.ui_state.editor_state() else {
+            return;
+        };
+        let loc = if editor.location.trim().is_empty() {
+            None
+        } else {
+            Some(editor.location.clone())
+        };
+        let desc = if editor.desc.trim().is_empty() {
+            None
+        } else {
+            Some(editor.desc.clone())
+        };
+        let end = parse_from_str(&editor.end);
+        match orig {
+            EditItem::Event(orig) => {
+                let start = parse_from_str(&editor.start);
+                self.state.pending.update_event(
+                    orig,
+                    editor.summary.clone(),
+                    start,
+                    end,
+                    loc,
+                    desc,
+                );
+            }
+            EditItem::Task(orig) => {
+                self.state
+                    .pending
+                    .update_task(orig, editor.summary.clone(), end, loc, desc);
+            }
+        }
+    }
+
+    fn show_editor(&self) {
+        while let Some(child) = self.agenda.first_child() {
+            self.agenda.remove(&child);
+        }
+
+        let Some(editor) = self.ui_state.editor_state() else {
+            return;
+        };
+
+        let is_event = matches!(editor.item, EditItem::Event(_));
+        let title = if is_event { "Edit Event" } else { "Edit Task" };
+        self.agenda_title.set_text(title);
+
+        let fields = EditorField::ALL;
+        let active = editor.is_editing();
+        let selected_field = editor.selected_field.0;
+
+        fields.iter().for_each(|field| {
+            let row = Box::new(Orientation::Horizontal, 8);
+            row.add_css_class("editor-field-row");
+
+            let selected = *field == selected_field;
+            if selected {
+                row.add_css_class("editor-field-row-selected");
+            }
+
+            let label = Label::new(Some(field.label(is_event)));
+            label.set_halign(Align::Start);
+            label.add_css_class("editor-field-label");
+            row.append(&label);
+
+            let val = editor.get_field_value(*field);
+
+            let entry = if selected && active {
+                let entry = Entry::builder().text(val).hexpand(true).build();
+                entry.add_css_class("editor-entry");
+
+                let ui_state = self.ui_state.clone();
+                let widget = self.clone();
+                let orig = editor.item.clone();
+                let entry2 = entry.clone();
+
+                entry.connect_activate(move |_| {
+                    let new = entry2.text().to_string();
+                    ui_state.editor_stop_write(new, true);
+                    widget.save_item(&orig);
+                    widget.update();
+                });
+
+                row.append(&entry);
+                Some(entry)
+            } else {
+                let label = Label::new(Some(if val.is_empty() { "(empty)" } else { val }));
+                label.set_halign(Align::Start);
+                label.set_hexpand(true);
+                row.append(&label);
+                None
+            };
+
+            self.agenda.append(&row);
+
+            if let Some(entry) = entry {
+                entry.grab_focus();
+                entry.set_position(-1);
+            }
+        });
+
+        let hint = if active {
+            "[Enter] Save, [Esc] Cancel field edit"
+        } else {
+            "[Up/Down] Select field, [e] Edit field, [Enter] Save, [Esc] Discard & Exit"
+        };
+        let label = Label::new(Some(hint));
+        label.set_halign(Align::Start);
+        label.add_css_class("editor-hints");
+        self.agenda.append(&label);
     }
 
     pub fn cycle_calendar(&self, right: bool) {
@@ -407,8 +568,14 @@ impl Widget {
                     self.toggle_task();
                 }
             }
+            Action::Edit => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    self.start_editing_selected();
+                }
+            }
             _ => {}
         };
+
         self.update();
     }
 }

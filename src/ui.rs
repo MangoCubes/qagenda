@@ -12,7 +12,7 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use crate::{
     config::{Config, keybinds::Action},
     state::State,
-    ui::widget::Widget,
+    ui::{state::Mode, widget::Widget},
 };
 
 mod calendar;
@@ -75,9 +75,54 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let keybinds = config.keybinds.clone();
     let widget2 = widget.clone();
 
-    ckey.connect_key_pressed(move |_, keyval, _, state| {
-        if let Some(action) = keybinds.get(&keyval, state) {
-            if widget2.ui_state.confirming_exit() {
+    ckey.connect_key_pressed(move |_, keyval, _, state| match widget2.ui_state.mode() {
+        Mode::Edit(editor) => {
+            if editor.is_editing() {
+                keybinds
+                    .get(&keyval, state)
+                    .map_or(Propagation::Proceed, |action| match action {
+                        Action::Exit => {
+                            widget2.ui_state.editor_stop_write(String::new(), false);
+                            widget2.update();
+                            Propagation::Stop
+                        }
+                        _ => Propagation::Proceed,
+                    })
+            } else {
+                keybinds
+                    .get(&keyval, state)
+                    .map_or(Propagation::Proceed, |a| {
+                        match a {
+                            Action::Up => {
+                                widget2.ui_state.editor_move_field(false);
+                                widget2.update();
+                            }
+                            Action::Down => {
+                                widget2.ui_state.editor_move_field(true);
+                                widget2.update();
+                            }
+                            Action::Edit => {
+                                widget2.ui_state.editor_write();
+                                widget2.update();
+                            }
+                            Action::ToggleComplete => {
+                                widget2.save_item(&editor.item);
+                                widget2.ui_state.stop_edit();
+                                widget2.update();
+                            }
+                            Action::Exit => {
+                                widget2.ui_state.stop_edit();
+                                widget2.update();
+                            }
+                            _ => {}
+                        };
+                        Propagation::Stop
+                    })
+            }
+        }
+        Mode::ConfirmExit => keybinds
+            .get(&keyval, state)
+            .map_or(Propagation::Proceed, |action| {
                 match action {
                     Action::Yes => {
                         // TODO: write changes
@@ -96,22 +141,25 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                     }
                     _ => {}
                 }
-            } else if *action == Action::Exit {
-                if widget2.state.pending.has_changes() {
-                    widget2.ui_state.set_confirming_exit(true);
-                    widget2.update();
+                Propagation::Stop
+            }),
+        Mode::Browse => keybinds
+            .get(&keyval, state)
+            .map_or(Propagation::Proceed, |action| {
+                if *action == Action::Exit {
+                    if widget2.state.pending.has_changes() {
+                        widget2.ui_state.set_confirming_exit(true);
+                        widget2.update();
+                    } else {
+                        window2.set_visible(false);
+                        window2.set_sensitive(false);
+                        app2.quit();
+                    }
                 } else {
-                    window2.set_visible(false);
-                    window2.set_sensitive(false);
-                    app2.quit();
+                    widget2.handle_action(*action);
                 }
-            } else {
-                widget2.handle_action(*action);
-            };
-            Propagation::Stop
-        } else {
-            Propagation::Proceed
-        }
+                Propagation::Stop
+            }),
     });
 
     window.add_controller(ckey);

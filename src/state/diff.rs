@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use icalendar::DatePerhapsTime;
+
+use crate::state::details::Details;
 use crate::{
     state::{event::EventItem, task::TaskItem},
     types::UUID,
@@ -18,6 +21,21 @@ struct InnerDiff {
     deleted_tasks: HashMap<String, Vec<(UUID, String)>>,
 }
 
+/// Represents differences found in a single calendar task or event. Contains natural language
+/// description of the changes.
+pub enum SingleDiff {
+    Create {
+        summary: String,
+    },
+    Delete {
+        summary: String,
+    },
+    Update {
+        summary: String,
+        changes: Vec<String>,
+    },
+}
+
 impl InnerDiff {
     fn new() -> Self {
         Self {
@@ -29,6 +47,7 @@ impl InnerDiff {
             deleted_tasks: HashMap::new(),
         }
     }
+
     fn prepare_update_task(&mut self, task: &TaskItem) -> &mut TaskItem {
         &mut self
             .tasks
@@ -44,21 +63,35 @@ impl InnerDiff {
         r.completed = !r.completed;
     }
 
-    fn get_changes(&self) -> HashMap<String, Vec<String>> {
-        let mut cal_changes: HashMap<String, Vec<String>> = HashMap::new();
+    fn prepare_update_event(&mut self, event: &EventItem) -> &mut EventItem {
+        &mut self
+            .events
+            .entry(event.cal.clone())
+            .or_insert(HashMap::new())
+            .entry(event.uid.clone())
+            .or_insert((event.clone(), event.clone()))
+            .1
+    }
+
+    fn get_changes(&self) -> HashMap<String, Vec<SingleDiff>> {
+        let mut cal_changes: HashMap<String, Vec<SingleDiff>> = HashMap::new();
         self.new_events.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|e| format!("Create new event \"{}\"", e.summary))
-                .collect::<Vec<String>>();
+                .map(|e| SingleDiff::Create {
+                    summary: format!("Create new event \"{}\"", e.summary),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.new_tasks.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|e| format!("Create new task \"{}\"", e.summary))
-                .collect::<Vec<String>>();
+                .map(|e| SingleDiff::Create {
+                    summary: format!("Create new task \"{}\"", e.summary),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -66,8 +99,7 @@ impl InnerDiff {
             let msgs = es
                 .iter()
                 .map(|(_, (old, new))| old.diff(new))
-                .flatten()
-                .collect::<Vec<String>>();
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -75,24 +107,27 @@ impl InnerDiff {
             let msgs = es
                 .iter()
                 .map(|(_, (old, new))| old.diff(new))
-                .flatten()
-                .collect::<Vec<String>>();
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.deleted_events.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| format!("Delete event \"{}\"", s))
-                .collect::<Vec<String>>();
+                .map(|(_, s)| SingleDiff::Delete {
+                    summary: format!("Delete event \"{}\"", s),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
         self.deleted_tasks.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| format!("Delete task \"{}\"", s))
-                .collect::<Vec<String>>();
+                .map(|(_, s)| SingleDiff::Delete {
+                    summary: format!("Delete task \"{}\"", s),
+                })
+                .collect::<Vec<SingleDiff>>();
 
             cal_changes.entry(c.clone()).or_default().extend(msgs);
         });
@@ -116,7 +151,7 @@ impl Diff {
         self.inner.write().unwrap().toggle_task(task);
     }
 
-    pub fn get_changes(&self) -> HashMap<String, Vec<String>> {
+    pub fn get_changes(&self) -> HashMap<String, Vec<SingleDiff>> {
         self.inner.read().unwrap().get_changes()
     }
 
@@ -150,5 +185,39 @@ impl Diff {
             .and_then(|cal_tasks| cal_tasks.get(&task.uid))
             .map(|(_, modified)| modified.completed)
             .unwrap_or(task.completed)
+    }
+
+    pub fn update_event(
+        &self,
+        event: &EventItem,
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut inner = self.inner.write().unwrap();
+        let target = inner.prepare_update_event(event);
+        target.summary = summary;
+        target.start = start;
+        target.end = end;
+        target.details = Details::new(location, description);
+        target.rebuild();
+    }
+
+    pub fn update_task(
+        &self,
+        task: &TaskItem,
+        summary: String,
+        due: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut inner = self.inner.write().unwrap();
+        let target = inner.prepare_update_task(task);
+        target.summary = summary;
+        target.due = due;
+        target.details = Details::new(location, description);
+        target.rebuild();
     }
 }

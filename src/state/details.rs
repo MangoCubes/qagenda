@@ -15,4 +15,10 @@ impl Details {
             })
         }
     }
+    pub fn to_strs(&self) -> (String, String) {
+        (
+            self.location.as_deref().unwrap_or("").to_string(),
+            self.description.as_deref().unwrap_or("").to_string(),
+        )
+    }
 }
