@@ -17,7 +17,7 @@ pub struct EventItem {
     pub duration: String,
     pub start: Option<DatePerhapsTime>,
     pub end: Option<DatePerhapsTime>,
-    pub details: Option<Details>,
+    pub details: Details,
     pub uid: UUID,
 }
 
@@ -67,7 +67,7 @@ impl EventItem {
         summary: String,
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
-        details: Option<Details>,
+        details: Details,
     ) -> Self {
         Self {
             cal,

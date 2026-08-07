@@ -237,14 +237,12 @@ impl Widget {
                             "agenda-event-item",
                             selected,
                             &e.duration,
-                            e.details.is_some(),
+                            e.details.has_details(),
                             &e.summary,
                         );
 
-                        if expanded && selected {
-                            if let Some(d) = &e.details {
-                                item_box.append(&details(d));
-                            }
+                        if expanded && selected && e.details.has_details() {
+                            item_box.append(&details(&e.details));
                         }
 
                         self.agenda.append(&item_box);
@@ -265,7 +263,7 @@ impl Widget {
                             "agenda-task-item",
                             selected,
                             &t.duetxt,
-                            t.details.is_some(),
+                            t.details.has_details(),
                             &t.summary,
                         );
 
@@ -273,10 +271,8 @@ impl Widget {
                             item_box.add_css_class("task-completed");
                         }
 
-                        if expanded && selected {
-                            if let Some(d) = &t.details {
-                                item_box.append(&details(d));
-                            }
+                        if expanded && selected && t.details.has_details() {
+                            item_box.append(&details(&t.details));
                         }
 
                         self.agenda.append(&item_box);

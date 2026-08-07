@@ -19,7 +19,7 @@ pub struct TaskItem {
     pub duetxt: String,
     pub due: Option<DatePerhapsTime>,
     pub start: Option<DatePerhapsTime>,
-    pub details: Option<Details>,
+    pub details: Details,
     pub uid: String,
 }
 

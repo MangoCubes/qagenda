@@ -68,40 +68,28 @@ pub struct EditorState {
 impl EditorState {
     pub fn new(item: EditItem) -> Self {
         let (summary, start, end, location, desc) = match &item {
-            EditItem::Event(event) => {
-                let (l, d) = match &event.details {
-                    Some(d) => d.to_strs(),
-                    None => ("".to_string(), "".to_string()),
-                };
-                (
-                    event.summary.clone(),
-                    event.start.as_ref().map_or("".to_string(), dpt_to_str),
-                    event.end.as_ref().map_or("".to_string(), dpt_to_str),
-                    l,
-                    d,
-                )
-            }
-            EditItem::Task(task) => {
-                let (l, d) = match &task.details {
-                    Some(d) => d.to_strs(),
-                    None => ("".to_string(), "".to_string()),
-                };
-                (
-                    task.summary.clone(),
-                    task.start.as_ref().map_or("".to_string(), dpt_to_str),
-                    task.due.as_ref().map_or("".to_string(), dpt_to_str),
-                    l,
-                    d,
-                )
-            }
+            EditItem::Event(event) => (
+                event.summary.clone(),
+                event.start.as_ref().map_or("".to_string(), dpt_to_str),
+                event.end.as_ref().map_or("".to_string(), dpt_to_str),
+                event.details.location.clone(),
+                event.details.description.clone(),
+            ),
+            EditItem::Task(task) => (
+                task.summary.clone(),
+                task.start.as_ref().map_or("".to_string(), dpt_to_str),
+                task.due.as_ref().map_or("".to_string(), dpt_to_str),
+                task.details.location.clone(),
+                task.details.description.clone(),
+            ),
         };
         Self {
             selected_field: (EditorField::Summary, false),
             summary,
             start,
             end,
-            location,
-            desc,
+            location: location.unwrap_or_default(),
+            desc: desc.unwrap_or_default(),
             item,
         }
     }
@@ -112,16 +100,8 @@ impl EditorState {
             summary: e.summary.clone(),
             start: e.start.as_ref().map_or("".to_string(), dpt_to_str),
             end: e.end.as_ref().map_or("".to_string(), dpt_to_str),
-            location: e
-                .details
-                .as_ref()
-                .and_then(|d| d.location.clone())
-                .unwrap_or_default(),
-            desc: e
-                .details
-                .as_ref()
-                .and_then(|d| d.description.clone())
-                .unwrap_or_default(),
+            location: e.details.location.clone().unwrap_or_default(),
+            desc: e.details.description.clone().unwrap_or_default(),
             item: EditItem::Event(e),
         }
     }
