@@ -243,14 +243,6 @@ impl UIState {
         self.inner.read().unwrap().mode.clone()
     }
 
-    pub fn set_mode(&self, mode: Mode) {
-        self.inner.write().unwrap().mode = mode;
-    }
-
-    pub fn confirming_exit(&self) -> bool {
-        matches!(self.mode(), Mode::ConfirmExit)
-    }
-
     pub fn set_confirming_exit(&self, exit: bool) {
         let mut guard = self.inner.write().unwrap();
         guard.mode = if exit {
@@ -260,13 +252,14 @@ impl UIState {
         };
     }
 
-    pub fn is_editing(&self) -> bool {
-        matches!(self.mode(), Mode::Edit(_))
-    }
-
     pub fn start_edit(&self, item: EditItem) {
         let mut guard = self.inner.write().unwrap();
         guard.mode = Mode::Edit(EditorState::new(item));
+    }
+
+    pub fn stop_edit(&self) {
+        let mut guard = self.inner.write().unwrap();
+        guard.mode = Mode::Browse;
     }
 
     pub fn editor_state(&self) -> Option<EditorState> {
@@ -295,9 +288,8 @@ impl UIState {
         if let Mode::Edit(editor) = &mut guard.mode {
             if confirm {
                 editor.set_field_value(value);
-            };
+            }
             editor.selected_field.1 = false;
-            guard.mode = Mode::Browse;
         }
     }
 }
