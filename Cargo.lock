@@ -853,6 +853,7 @@ dependencies = [
  "icalendar",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]

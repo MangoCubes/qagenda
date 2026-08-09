@@ -254,7 +254,12 @@ impl UIState {
 
     pub fn start_edit(&self, item: EditItem) {
         let mut guard = self.inner.write().unwrap();
-        guard.mode = Mode::Edit(EditorState::new(item));
+        guard.mode = Mode::Edit(EditorState::new(item, false));
+    }
+
+    pub fn start_new(&self, editor: EditorState) {
+        let mut guard = self.inner.write().unwrap();
+        guard.mode = Mode::Edit(editor);
     }
 
     pub fn stop_edit(&self) {

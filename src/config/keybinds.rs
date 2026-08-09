@@ -19,6 +19,7 @@ pub enum Action {
     Expand,
     ToggleComplete,
     Edit,
+    Add,
     Yes,
     No,
 }
@@ -42,6 +43,7 @@ impl Default for KeyBinds {
             ((Key::Tab, ModifierType::empty()), Action::Expand),
             ((Key::Return, ModifierType::empty()), Action::ToggleComplete),
             ((Key::e, ModifierType::empty()), Action::Edit),
+            ((Key::a, ModifierType::empty()), Action::Add),
             ((Key::y, ModifierType::empty()), Action::Yes),
             ((Key::n, ModifierType::empty()), Action::No),
         ]))

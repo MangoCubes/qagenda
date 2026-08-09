@@ -240,4 +240,52 @@ impl Diff {
         target.details = Details::new(location, description);
         target.rebuild();
     }
+
+    pub fn add_event(
+        &self,
+        cal: String,
+        summary: String,
+        start: Option<DatePerhapsTime>,
+        end: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut e = EventItem::create(cal.clone());
+        e.details = Details::new(location, description);
+        e.summary = summary;
+        e.start = start;
+        e.end = end;
+        e.rebuild();
+
+        self.inner
+            .write()
+            .unwrap()
+            .new_events
+            .entry(cal)
+            .or_default()
+            .push(e);
+    }
+
+    pub fn add_task(
+        &self,
+        cal: String,
+        summary: String,
+        due: Option<DatePerhapsTime>,
+        location: Option<String>,
+        description: Option<String>,
+    ) {
+        let mut t = TaskItem::create(cal.clone());
+        t.details = Details::new(location, description);
+        t.summary = summary;
+        t.due = due;
+        t.rebuild();
+
+        self.inner
+            .write()
+            .unwrap()
+            .new_tasks
+            .entry(cal)
+            .or_default()
+            .push(t);
+    }
 }

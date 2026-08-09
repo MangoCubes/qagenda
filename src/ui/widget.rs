@@ -12,7 +12,7 @@ use crate::{
         calendar::MonthCalendar,
         state::{
             Focus, Mode, Tab, UIState,
-            editor::{EditItem, EditorField},
+            editor::{EditItem, EditorField, EditorState},
         },
     },
 };
@@ -336,6 +336,17 @@ impl Widget {
         self.agenda.append(&query);
     }
 
+    pub fn start_creating(&self) {
+        let Some(cal) = self.ui_state.selected_cal() else {
+            return;
+        };
+        let editor = match self.ui_state.tab() {
+            Tab::Events { .. } => EditorState::new_event(cal),
+            Tab::Tasks { .. } => EditorState::new_task(cal),
+        };
+        self.ui_state.start_new(editor);
+    }
+
     pub fn start_editing_selected(&self) {
         let current = self.ui_state.current_item();
         match self.ui_state.tab() {
@@ -364,10 +375,7 @@ impl Widget {
         }
     }
 
-    pub fn save_item(&self, orig: &EditItem) {
-        let Some(editor) = self.ui_state.editor_state() else {
-            return;
-        };
+    pub fn save_item(&self, editor: &EditorState) {
         let loc = if editor.location.trim().is_empty() {
             None
         } else {
@@ -379,22 +387,46 @@ impl Widget {
             Some(editor.desc.clone())
         };
         let end = parse_from_str(&editor.end);
-        match orig {
-            EditItem::Event(orig) => {
-                let start = parse_from_str(&editor.start);
-                self.state.pending.update_event(
-                    orig,
-                    editor.summary.clone(),
-                    start,
-                    end,
-                    loc,
-                    desc,
-                );
+        if editor.is_new {
+            match &editor.item {
+                EditItem::Event(e) => {
+                    self.state.pending.add_event(
+                        e.cal.clone(),
+                        editor.summary.clone(),
+                        parse_from_str(&editor.start),
+                        end,
+                        loc,
+                        desc,
+                    );
+                }
+                EditItem::Task(t) => {
+                    self.state.pending.add_task(
+                        t.cal.clone(),
+                        editor.summary.clone(),
+                        end,
+                        loc,
+                        desc,
+                    );
+                }
             }
-            EditItem::Task(orig) => {
-                self.state
-                    .pending
-                    .update_task(orig, editor.summary.clone(), end, loc, desc);
+        } else {
+            match &editor.item {
+                EditItem::Event(orig) => {
+                    let start = parse_from_str(&editor.start);
+                    self.state.pending.update_event(
+                        orig,
+                        editor.summary.clone(),
+                        start,
+                        end,
+                        loc,
+                        desc,
+                    );
+                }
+                EditItem::Task(orig) => {
+                    self.state
+                        .pending
+                        .update_task(orig, editor.summary.clone(), end, loc, desc);
+                }
             }
         }
     }
@@ -409,7 +441,12 @@ impl Widget {
         };
 
         let is_event = matches!(editor.item, EditItem::Event(_));
-        let title = if is_event { "Edit Event" } else { "Edit Task" };
+        let title = match (editor.is_new, is_event) {
+            (true, true) => "New Event",
+            (true, false) => "New Task",
+            (false, true) => "Edit Event",
+            (false, false) => "Edit Task",
+        };
         self.agenda_title.set_text(title);
 
         let fields = EditorField::ALL;
@@ -438,13 +475,11 @@ impl Widget {
 
                 let ui_state = self.ui_state.clone();
                 let widget = self.clone();
-                let orig = editor.item.clone();
                 let entry2 = entry.clone();
 
                 entry.connect_activate(move |_| {
                     let new = entry2.text().to_string();
                     ui_state.editor_stop_write(new, true);
-                    widget.save_item(&orig);
                     widget.update();
                 });
 
@@ -581,6 +616,11 @@ impl Widget {
             Action::Edit => {
                 if self.ui_state.focus() == Focus::Agenda {
                     self.start_editing_selected();
+                }
+            }
+            Action::Add => {
+                if self.ui_state.focus() == Focus::Agenda {
+                    self.start_creating();
                 }
             }
             _ => {}

@@ -117,7 +117,9 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                                 widget2.update();
                             }
                             Action::ToggleComplete => {
-                                widget2.save_item(&editor.item);
+                                if let Some(editor) = widget2.ui_state.editor_state() {
+                                    widget2.save_item(&editor);
+                                }
                                 widget2.ui_state.stop_edit();
                                 widget2.update();
                             }

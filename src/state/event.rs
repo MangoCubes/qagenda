@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
+use uuid::Uuid;
 
 use crate::state::details::Details;
 use crate::state::diff::SingleDiff;
@@ -78,6 +79,17 @@ impl EventItem {
             end,
             details,
         }
+    }
+
+    pub fn create(cal: String) -> Self {
+        Self::new(
+            cal,
+            Uuid::new_v4().to_string(),
+            String::new(),
+            None,
+            None,
+            Details::new(None, None),
+        )
     }
 
     pub fn from(cal: String, event: &Event) -> Self {

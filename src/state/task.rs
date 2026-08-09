@@ -4,6 +4,7 @@ use chrono::Local;
 use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
 
 use chrono::NaiveDateTime;
+use uuid::Uuid;
 
 use crate::state::details::Details;
 use crate::state::diff::SingleDiff;
@@ -33,6 +34,21 @@ impl TaskItem {
     pub fn rebuild(&mut self) {
         self.duetxt = Self::gen_duetxt(&self.due);
     }
+
+    pub fn create(cal: String) -> Self {
+        Self {
+            cal,
+            summary: String::new(),
+            completed: false,
+            upcoming: false,
+            duetxt: "No due date".to_string(),
+            due: None,
+            start: None,
+            details: Details::new(None, None),
+            uid: Uuid::new_v4().to_string(),
+        }
+    }
+
     pub fn new(cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
