@@ -49,7 +49,7 @@
           inherit buildInputs nativeBuildInputs;
           src = ./.;
           name = "qagenda";
-          cargoHash = "sha256-KRcrxeYs8g/EHOT8J5HrQUw1DS5fi50vVHBgOnNDVVc=";
+          cargoHash = "sha256-5bb5cw1RPsiOGGlfCvTkxHvse/WRPnsCrcNihahMe+M=";
         };
 
         devShells.default = pkgs.mkShell {

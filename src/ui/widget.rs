@@ -231,10 +231,10 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    events.into_iter().enumerate().for_each(|(i, e)| {
+                    events.iter().enumerate().for_each(|(i, e)| {
                         let selected = i == current;
                         let modified = self.state.pending.get_event(e);
-                        let e = modified.as_ref().unwrap_or(e);
+                        let e = modified.unwrap_or(e.clone());
                         let item_box = item_box(
                             "agenda-event-item",
                             selected,
@@ -258,11 +258,11 @@ impl Widget {
                     label.set_halign(Align::Center);
                     self.agenda.append(&label);
                 } else {
-                    tasks.into_iter().enumerate().for_each(|(i, t)| {
+                    tasks.iter().enumerate().for_each(|(i, t)| {
                         let selected = i == current;
                         let modified = self.state.pending.get_task(t);
-                        let t = modified.as_ref().unwrap_or(t);
-                        let completed = self.state.pending.is_task_completed(t);
+                        let t = modified.unwrap_or(t.clone());
+                        let completed = self.state.pending.is_task_completed(&t);
                         let item_box = item_box(
                             "agenda-task-item",
                             selected,

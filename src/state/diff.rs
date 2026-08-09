@@ -288,4 +288,46 @@ impl Diff {
             .or_default()
             .push(t);
     }
+
+    pub fn new_tasks_count(&self, cal: Option<&str>) -> usize {
+        let guard = self.inner.read().unwrap();
+        match cal {
+            Some(c) => guard.new_tasks.get(c).map_or(0, |v| v.len()),
+            None => guard.new_tasks.iter().map(|(_, e)| e.len()).sum(),
+        }
+    }
+
+    pub fn new_events_count(&self, cal: Option<&str>) -> usize {
+        let guard = self.inner.read().unwrap();
+        match cal {
+            Some(c) => guard.new_events.get(c).map_or(0, |v| v.len()),
+            None => guard.new_events.iter().map(|(_, e)| e.len()).sum(),
+        }
+    }
+
+    pub fn get_new_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
+        let guard = self.inner.read().unwrap();
+        match cal {
+            Some(c) => guard.new_tasks.get(c).map_or(vec![], |v| v.clone()),
+            None => guard
+                .new_tasks
+                .iter()
+                .map(|(_, e)| e.clone())
+                .flatten()
+                .collect(),
+        }
+    }
+
+    pub fn get_new_events(&self, cal: Option<&str>) -> Vec<EventItem> {
+        let guard = self.inner.read().unwrap();
+        match cal {
+            Some(c) => guard.new_events.get(c).map_or(vec![], |v| v.clone()),
+            None => guard
+                .new_events
+                .iter()
+                .map(|(_, e)| e.clone())
+                .flatten()
+                .collect(),
+        }
+    }
 }

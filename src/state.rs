@@ -116,42 +116,60 @@ impl State {
     }
 
     pub fn get_tasks_count(&self, cal: Option<&str>) -> usize {
-        match cal {
+        (match cal {
             Some(name) => self.cal[name].incomplete_tasks_count(),
             None => self
                 .cal
                 .iter()
                 .fold(0, |count, (_, c)| count + c.incomplete_tasks_count()),
-        }
+        }) + self.pending.new_tasks_count(cal)
     }
     pub fn get_events_count(&self, cal: Option<&str>) -> usize {
-        match cal {
+        (match cal {
             Some(name) => self.cal[name].active_events_count(),
             None => self
                 .cal
                 .iter()
                 .fold(0, |count, (_, c)| count + c.active_events_count()),
-        }
+        }) + self.pending.new_events_count(cal)
     }
 
-    pub fn get_events(&self, cal: Option<&str>) -> Vec<&EventItem> {
-        let mut events: Vec<&EventItem> = match cal {
-            Some(name) => self.cal[name].active_events(),
-            None => self.cal.values().flat_map(|c| c.active_events()).collect(),
-        };
+    pub fn get_events(&self, cal: Option<&str>) -> Vec<EventItem> {
+        let mut events: Vec<EventItem> = cal.map_or_else(
+            || {
+                self.cal
+                    .values()
+                    .flat_map(|c| c.active_events())
+                    .cloned()
+                    .collect()
+            },
+            |name| {
+                self.cal.get(name).map_or_else(Vec::new, |c| {
+                    c.active_events().into_iter().cloned().collect()
+                })
+            },
+        );
+        events.extend(self.pending.get_new_events(cal));
         events.sort_unstable();
         events
     }
 
-    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<&TaskItem> {
-        let mut tasks: Vec<&TaskItem> = match cal {
-            Some(name) => self.cal[name].incomplete_tasks(),
-            None => self
-                .cal
-                .values()
-                .flat_map(|c| c.incomplete_tasks())
-                .collect(),
-        };
+    pub fn get_tasks(&self, cal: Option<&str>) -> Vec<TaskItem> {
+        let mut tasks: Vec<TaskItem> = cal.map_or_else(
+            || {
+                self.cal
+                    .values()
+                    .flat_map(|c| c.incomplete_tasks())
+                    .cloned()
+                    .collect()
+            },
+            |name| {
+                self.cal.get(name).map_or_else(Vec::new, |c| {
+                    c.incomplete_tasks().into_iter().cloned().collect()
+                })
+            },
+        );
+        tasks.extend(self.pending.get_new_tasks(cal));
         tasks.sort_unstable();
         tasks
     }
