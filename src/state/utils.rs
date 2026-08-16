@@ -93,7 +93,7 @@ pub fn dpt_to_str(dpt: &DatePerhapsTime) -> String {
 }
 
 pub fn parse_from_str(input: &str) -> Option<DatePerhapsTime> {
-    ["%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M", "%Y/%m/%d", "%Y-%m-%d"]
+    let dt = ["%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M"]
         .into_iter()
         .find_map(|fmt| NaiveDateTime::parse_from_str(input.trim(), fmt).ok())
         .map(|ndt| {
@@ -101,5 +101,12 @@ pub fn parse_from_str(input: &str) -> Option<DatePerhapsTime> {
                 date_time: ndt,
                 tzid: iana_time_zone::get_timezone().unwrap_or_default(),
             })
-        })
+        });
+    if matches!(dt, Some(_)) {
+        return dt;
+    }
+    ["%Y/%m/%d", "%Y-%m-%d"]
+        .into_iter()
+        .find_map(|fmt| NaiveDate::parse_from_str(input.trim(), fmt).ok())
+        .map(|ndt| ndt.into())
 }

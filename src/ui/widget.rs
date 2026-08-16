@@ -412,11 +412,10 @@ impl Widget {
         } else {
             match &editor.item {
                 EditItem::Event(orig) => {
-                    let start = parse_from_str(&editor.start);
                     self.state.pending.update_event(
                         orig,
                         editor.summary.clone(),
-                        start,
+                        parse_from_str(&editor.start),
                         end,
                         loc,
                         desc,
