@@ -1,4 +1,45 @@
-use crate::state::{event::EventItem, task::TaskItem, utils::dpt_to_str};
+use chrono::{NaiveDate, NaiveDateTime};
+use icalendar::{CalendarDateTime, DatePerhapsTime};
+
+use crate::state::{event::EventItem, task::TaskItem, utils::get_naive_datetime};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DateFieldType {
+    Year,
+    Month,
+    Day,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DateTimeFieldType {
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimeField {
+    None,
+    Date(NaiveDate, DateFieldType),
+    DateTime(NaiveDateTime, DateTimeFieldType),
+}
+
+impl TimeField {
+    pub fn to_dpt(&self) -> Option<DatePerhapsTime> {
+        match self {
+            TimeField::None => None,
+            TimeField::Date(nd, _) => Some(DatePerhapsTime::Date(*nd)),
+            TimeField::DateTime(ndt, _) => {
+                Some(DatePerhapsTime::DateTime(CalendarDateTime::WithTimezone {
+                    date_time: *ndt,
+                    tzid: iana_time_zone::get_timezone().unwrap_or_default(),
+                }))
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EditItem {
@@ -16,14 +57,6 @@ pub enum EditorField {
 }
 
 impl EditorField {
-    pub const ALL: [EditorField; 5] = [
-        EditorField::Summary,
-        EditorField::Start,
-        EditorField::End,
-        EditorField::Location,
-        EditorField::Description,
-    ];
-
     pub fn label(&self, is_event: bool) -> &'static str {
         match self {
             EditorField::Summary => "Summary",
@@ -43,45 +76,46 @@ impl EditorField {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EditorState {
-    pub item: EditItem,
+    pub orig: EditItem,
     pub is_new: bool,
     pub selected_field: (EditorField, bool),
     pub summary: String,
-    pub start: String,
-    pub end: String,
+    pub start: TimeField,
+    pub end: TimeField,
     pub location: String,
     pub desc: String,
 }
 
 impl EditorState {
     pub fn next(&mut self, down: bool) {
-        let len = EditorField::ALL.len();
-        let idx = EditorField::ALL
-            .iter()
-            .position(|f| f == &self.selected_field.0)
-            .unwrap();
-        let next_idx = if down {
-            (idx + 1) % len
-        } else if idx == 0 {
-            len - 1
-        } else {
-            idx - 1
-        };
-        self.selected_field.0 = EditorField::ALL[next_idx];
+        todo!()
     }
+
     pub fn new(item: EditItem, is_new: bool) -> Self {
+        fn convert(orig: &Option<DatePerhapsTime>) -> TimeField {
+            if let Some(t) = orig {
+                match t {
+                    DatePerhapsTime::DateTime(cdt) => {
+                        TimeField::DateTime(get_naive_datetime(&cdt), DateTimeFieldType::Year)
+                    }
+                    DatePerhapsTime::Date(nd) => TimeField::Date(*nd, DateFieldType::Year),
+                }
+            } else {
+                TimeField::None
+            }
+        }
         let (summary, start, end, location, desc) = match &item {
             EditItem::Event(event) => (
                 event.summary.clone(),
-                event.start.as_ref().map_or("".to_string(), dpt_to_str),
-                event.end.as_ref().map_or("".to_string(), dpt_to_str),
+                convert(&event.start),
+                convert(&event.end),
                 event.details.location.clone(),
                 event.details.description.clone(),
             ),
             EditItem::Task(task) => (
                 task.summary.clone(),
-                task.start.as_ref().map_or("".to_string(), dpt_to_str),
-                task.due.as_ref().map_or("".to_string(), dpt_to_str),
+                convert(&task.start),
+                convert(&task.due),
                 task.details.location.clone(),
                 task.details.description.clone(),
             ),
@@ -94,7 +128,7 @@ impl EditorState {
             end,
             location: location.unwrap_or_default(),
             desc: desc.unwrap_or_default(),
-            item,
+            orig: item,
         }
     }
 
@@ -110,21 +144,11 @@ impl EditorState {
         self.selected_field.1
     }
 
-    pub fn get_field_value(&self, field: EditorField) -> &str {
-        match field {
-            EditorField::Summary => &self.summary,
-            EditorField::Start => &self.start,
-            EditorField::End => &self.end,
-            EditorField::Location => &self.location,
-            EditorField::Description => &self.desc,
-        }
-    }
-
     pub fn set_field_value(&mut self, value: String) {
         match self.selected_field.0 {
             EditorField::Summary => self.summary = value,
-            EditorField::Start => self.start = value,
-            EditorField::End => self.end = value,
+            EditorField::Start => todo!(),
+            EditorField::End => todo!(),
             EditorField::Location => self.location = value,
             EditorField::Description => self.desc = value,
         }

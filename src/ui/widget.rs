@@ -386,14 +386,14 @@ impl Widget {
         } else {
             Some(editor.desc.clone())
         };
-        let end = parse_from_str(&editor.end);
+        let end = editor.end.to_dpt();
         if editor.is_new {
-            match &editor.item {
+            match &editor.orig {
                 EditItem::Event(e) => {
                     self.state.pending.add_event(
                         e.cal.clone(),
                         editor.summary.clone(),
-                        parse_from_str(&editor.start),
+                        editor.start.to_dpt(),
                         end,
                         loc,
                         desc,
@@ -410,12 +410,12 @@ impl Widget {
                 }
             }
         } else {
-            match &editor.item {
+            match &editor.orig {
                 EditItem::Event(orig) => {
                     self.state.pending.update_event(
                         orig,
                         editor.summary.clone(),
-                        parse_from_str(&editor.start),
+                        editor.start.to_dpt(),
                         end,
                         loc,
                         desc,
@@ -439,7 +439,7 @@ impl Widget {
             return;
         };
 
-        let is_event = matches!(editor.item, EditItem::Event(_));
+        let is_event = matches!(editor.orig, EditItem::Event(_));
         let title = match (editor.is_new, is_event) {
             (true, true) => "New Event",
             (true, false) => "New Task",
