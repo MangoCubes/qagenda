@@ -39,19 +39,6 @@ impl EditorField {
             EditorField::Description => "Description",
         }
     }
-
-    pub fn next(&self, down: bool) -> Self {
-        let len = Self::ALL.len();
-        let idx = Self::ALL.iter().position(|f| f == self).unwrap();
-        let next_idx = if down {
-            (idx + 1) % len
-        } else if idx == 0 {
-            len - 1
-        } else {
-            idx - 1
-        };
-        Self::ALL[next_idx]
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +54,21 @@ pub struct EditorState {
 }
 
 impl EditorState {
+    pub fn next(&mut self, down: bool) {
+        let len = EditorField::ALL.len();
+        let idx = EditorField::ALL
+            .iter()
+            .position(|f| f == &self.selected_field.0)
+            .unwrap();
+        let next_idx = if down {
+            (idx + 1) % len
+        } else if idx == 0 {
+            len - 1
+        } else {
+            idx - 1
+        };
+        self.selected_field.0 = EditorField::ALL[next_idx];
+    }
     pub fn new(item: EditItem, is_new: bool) -> Self {
         let (summary, start, end, location, desc) = match &item {
             EditItem::Event(event) => (

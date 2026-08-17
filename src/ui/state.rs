@@ -277,7 +277,7 @@ impl UIState {
     pub fn editor_move_field(&self, down: bool) {
         let mut guard = self.inner.write().unwrap();
         if let Mode::Edit(editor) = &mut guard.mode {
-            editor.selected_field.0 = editor.selected_field.0.next(down);
+            editor.next(down);
         }
     }
 
