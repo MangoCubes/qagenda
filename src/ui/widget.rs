@@ -509,9 +509,9 @@ impl Widget {
             let focused_field = |value: u32, width: i32| -> Option<Entry> {
                 if selected {
                     let entry = Entry::new();
+                    entry.set_text(&value.to_string());
                     entry.set_width_chars(width);
                     entry.set_max_length(width);
-                    entry.set_text(&value.to_string());
                     row.append(&entry);
                     Some(entry)
                 } else {
