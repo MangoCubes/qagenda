@@ -43,6 +43,46 @@ impl TimeField {
             }
         }
     }
+
+    fn cycle(&mut self, next: bool) {
+        match self {
+            TimeField::None => (),
+            TimeField::Date(_, date_field_type) => {
+                *date_field_type = if next {
+                    match date_field_type {
+                        DateFieldType::Year => DateFieldType::Month,
+                        DateFieldType::Month => DateFieldType::Day,
+                        DateFieldType::Day => DateFieldType::Year,
+                    }
+                } else {
+                    match date_field_type {
+                        DateFieldType::Year => DateFieldType::Day,
+                        DateFieldType::Month => DateFieldType::Year,
+                        DateFieldType::Day => DateFieldType::Month,
+                    }
+                }
+            }
+            TimeField::DateTime(_, date_time_field_type) => {
+                *date_time_field_type = if next {
+                    match date_time_field_type {
+                        DateTimeFieldType::Year => DateTimeFieldType::Month,
+                        DateTimeFieldType::Month => DateTimeFieldType::Day,
+                        DateTimeFieldType::Day => DateTimeFieldType::Hour,
+                        DateTimeFieldType::Hour => DateTimeFieldType::Minute,
+                        DateTimeFieldType::Minute => DateTimeFieldType::Year,
+                    }
+                } else {
+                    match date_time_field_type {
+                        DateTimeFieldType::Year => DateTimeFieldType::Minute,
+                        DateTimeFieldType::Month => DateTimeFieldType::Year,
+                        DateTimeFieldType::Day => DateTimeFieldType::Month,
+                        DateTimeFieldType::Hour => DateTimeFieldType::Day,
+                        DateTimeFieldType::Minute => DateTimeFieldType::Hour,
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,12 +141,14 @@ impl EditorState {
             (EditorField::Start, false) => match dir {
                 Direction::Up => self.selected_field.0 = EditorField::Summary,
                 Direction::Down => self.selected_field.0 = EditorField::End,
-                _ => (),
+                Direction::Right => self.start.cycle(true),
+                Direction::Left => self.start.cycle(false),
             },
             (EditorField::End, false) => match dir {
                 Direction::Up => self.selected_field.0 = EditorField::Start,
                 Direction::Down => self.selected_field.0 = EditorField::Location,
-                _ => (),
+                Direction::Right => self.end.cycle(true),
+                Direction::Left => self.end.cycle(false),
             },
             (EditorField::Location, false) => match dir {
                 Direction::Up => self.selected_field.0 = EditorField::End,
