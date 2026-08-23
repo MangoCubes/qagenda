@@ -1,7 +1,10 @@
 use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
 use icalendar::{CalendarDateTime, DatePerhapsTime};
 
-use crate::state::{event::EventItem, task::TaskItem, utils::get_naive_datetime};
+use crate::{
+    config::keybinds::Direction,
+    state::{event::EventItem, task::TaskItem, utils::get_naive_datetime},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DateFieldType {
@@ -88,8 +91,35 @@ pub struct EditorState {
 }
 
 impl EditorState {
-    pub fn next(&mut self, down: bool) {
-        todo!()
+    pub fn next(&mut self, dir: &Direction) {
+        match self.selected_field {
+            (EditorField::Summary, false) => match dir {
+                Direction::Up => self.selected_field.0 = EditorField::Description,
+                Direction::Down => self.selected_field.0 = EditorField::Start,
+                _ => (),
+            },
+            (EditorField::Start, false) => match dir {
+                Direction::Up => self.selected_field.0 = EditorField::Summary,
+                Direction::Down => self.selected_field.0 = EditorField::End,
+                _ => (),
+            },
+            (EditorField::End, false) => match dir {
+                Direction::Up => self.selected_field.0 = EditorField::Start,
+                Direction::Down => self.selected_field.0 = EditorField::Location,
+                _ => (),
+            },
+            (EditorField::Location, false) => match dir {
+                Direction::Up => self.selected_field.0 = EditorField::End,
+                Direction::Down => self.selected_field.0 = EditorField::Description,
+                _ => (),
+            },
+            (EditorField::Description, false) => match dir {
+                Direction::Up => self.selected_field.0 = EditorField::Location,
+                Direction::Down => self.selected_field.0 = EditorField::Summary,
+                _ => (),
+            },
+            _ => (),
+        }
     }
 
     pub fn new(item: EditItem, is_new: bool) -> Self {

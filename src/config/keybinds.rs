@@ -5,11 +5,17 @@ use serde::{Deserialize, Serialize, Serializer};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum Action {
+pub enum Direction {
     Up,
     Down,
     Left,
     Right,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Action {
+    Move(Direction),
     SectionUp,
     SectionDown,
     SectionLeft,
@@ -30,10 +36,22 @@ pub struct KeyBinds(HashMap<(Key, ModifierType), Action>);
 impl Default for KeyBinds {
     fn default() -> Self {
         Self(HashMap::from([
-            ((Key::Up, ModifierType::empty()), Action::Up),
-            ((Key::Down, ModifierType::empty()), Action::Down),
-            ((Key::Left, ModifierType::empty()), Action::Left),
-            ((Key::Right, ModifierType::empty()), Action::Right),
+            (
+                (Key::Up, ModifierType::empty()),
+                Action::Move(Direction::Up),
+            ),
+            (
+                (Key::Down, ModifierType::empty()),
+                Action::Move(Direction::Down),
+            ),
+            (
+                (Key::Left, ModifierType::empty()),
+                Action::Move(Direction::Left),
+            ),
+            (
+                (Key::Right, ModifierType::empty()),
+                Action::Move(Direction::Right),
+            ),
             ((Key::Up, ModifierType::SHIFT_MASK), Action::SectionUp),
             ((Key::Down, ModifierType::SHIFT_MASK), Action::SectionDown),
             ((Key::Left, ModifierType::SHIFT_MASK), Action::SectionLeft),
