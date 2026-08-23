@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 
+use crate::config::keybinds::Direction;
 use crate::ui::state::editor::{EditItem, EditorState};
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
@@ -274,10 +275,10 @@ impl UIState {
         }
     }
 
-    pub fn editor_move_field(&self, down: bool) {
+    pub fn editor_move_field(&self, dir: &Direction) {
         let mut guard = self.inner.write().unwrap();
         if let Mode::Edit(editor) = &mut guard.mode {
-            editor.next(down);
+            editor.next(dir);
         }
     }
 

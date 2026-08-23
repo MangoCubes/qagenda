@@ -104,12 +104,8 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                     .get(&keyval, state)
                     .map_or(Propagation::Proceed, |a| {
                         match a {
-                            Action::Up => {
-                                widget2.ui_state.editor_move_field(false);
-                                widget2.update();
-                            }
-                            Action::Down => {
-                                widget2.ui_state.editor_move_field(true);
+                            Action::Move(dir) => {
+                                widget2.ui_state.editor_move_field(dir);
                                 widget2.update();
                             }
                             Action::Edit => {

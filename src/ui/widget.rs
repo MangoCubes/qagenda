@@ -7,7 +7,7 @@ use gtk4::{
 };
 
 use crate::{
-    config::keybinds::Action,
+    config::keybinds::{Action, Direction},
     state::{State, details::Details, diff::SingleDiff},
     ui::{
         calendar::MonthCalendar,
@@ -685,14 +685,14 @@ impl Widget {
             Action::SectionDown => {
                 self.ui_state.set_focus(Focus::Agenda);
             }
-            Action::Left => {
+            Action::Move(Direction::Left) => {
                 if self.ui_state.focus() == Focus::Calendar {
                     self.ui_state.cycle_month(false);
                 } else {
                     self.cycle_calendar(false);
                 }
             }
-            Action::Right => {
+            Action::Move(Direction::Right) => {
                 if self.ui_state.focus() == Focus::Calendar {
                     self.ui_state.cycle_month(true);
                 } else {
@@ -704,7 +704,7 @@ impl Widget {
                     self.ui_state.toggle_tab();
                 }
             }
-            Action::Up => {
+            Action::Move(Direction::Up) => {
                 if self.ui_state.focus() == Focus::Agenda {
                     let item_count = match &self.ui_state.tab() {
                         Tab::Events { cal, .. } => self.state.get_events_count(cal.as_deref()),
@@ -713,7 +713,7 @@ impl Widget {
                     self.ui_state.cycle_item(false, item_count);
                 }
             }
-            Action::Down => {
+            Action::Move(Direction::Down) => {
                 if self.ui_state.focus() == Focus::Agenda {
                     let item_count = match &self.ui_state.tab() {
                         Tab::Events { cal, .. } => self.state.get_events_count(cal.as_deref()),
