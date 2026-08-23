@@ -98,6 +98,11 @@ label {
 	background: rgba(71, 200, 192, 0.3);
 }
 
+.editor-field-selected {
+	border: 1px solid rgba(71, 200, 192, 1);
+	background: rgba(71, 200, 192, 0.3);
+}
+
 .editor-field-label {
 	font-weight: bold;
 	padding: 4px;
@@ -112,6 +117,7 @@ label {
 	margin: 0px;
 }
 
-.editor-hints {
-	font-size: smaller;
+.debug {
+	border: 1px solid red;
+	background: green;
 }

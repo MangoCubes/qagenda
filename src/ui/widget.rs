@@ -515,13 +515,15 @@ impl Widget {
                     row.append(&entry);
                     Some(entry)
                 } else {
-                    row.append(&field(value, width as usize));
+                    let label = field(value, width as usize);
+                    label.add_css_class("editor-field-selected");
+                    row.append(&label);
                     None
                 }
             };
-            let date_divider = Label::new(Some("/"));
-            let time_divider = Label::new(Some(":"));
-            let space_divider = Label::new(Some(" "));
+            let date_divider = || Label::new(Some("/"));
+            let time_divider = || Label::new(Some(":"));
+            let space_divider = || Label::new(Some(" "));
             if let Some(entry) = match val {
                 TimeField::None => None,
                 TimeField::Date(naive_date, date_field_type) => {
@@ -529,34 +531,34 @@ impl Widget {
                         match &date_field_type {
                             DateFieldType::Year => {
                                 let entry = focused_field(naive_date.year() as u32, 4);
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date.day(), 2));
                                 entry
                             }
                             DateFieldType::Month => {
                                 row.append(&field(naive_date.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 let entry = focused_field(naive_date.month(), 2);
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date.day(), 2));
                                 entry
                             }
                             DateFieldType::Day => {
                                 row.append(&field(naive_date.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 let entry = focused_field(naive_date.day(), 2);
                                 entry
                             }
                         }
                     } else {
                         row.append(&field(naive_date.year() as u32, 4));
-                        row.append(&date_divider);
+                        row.append(&date_divider());
                         row.append(&field(naive_date.month(), 2));
-                        row.append(&date_divider);
+                        row.append(&date_divider());
                         row.append(&field(naive_date.day(), 2));
                         None
                     }
@@ -566,74 +568,74 @@ impl Widget {
                         match date_time_field_type {
                             DateTimeFieldType::Year => {
                                 let entry = focused_field(naive_date_time.year() as u32, 4);
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.day(), 2));
-                                row.append(&space_divider);
+                                row.append(&space_divider());
                                 row.append(&field(naive_date_time.hour(), 2));
-                                row.append(&time_divider);
+                                row.append(&time_divider());
                                 row.append(&field(naive_date_time.minute(), 2));
                                 entry
                             }
                             DateTimeFieldType::Month => {
                                 row.append(&field(naive_date_time.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 let entry = focused_field(naive_date_time.month(), 2);
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.day(), 2));
-                                row.append(&space_divider);
+                                row.append(&space_divider());
                                 row.append(&field(naive_date_time.hour(), 2));
-                                row.append(&time_divider);
+                                row.append(&time_divider());
                                 row.append(&field(naive_date_time.minute(), 2));
                                 entry
                             }
                             DateTimeFieldType::Day => {
                                 row.append(&field(naive_date_time.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 let entry = focused_field(naive_date_time.day(), 2);
-                                row.append(&space_divider);
+                                row.append(&space_divider());
                                 row.append(&field(naive_date_time.hour(), 2));
-                                row.append(&time_divider);
+                                row.append(&time_divider());
                                 row.append(&field(naive_date_time.minute(), 2));
                                 entry
                             }
                             DateTimeFieldType::Hour => {
                                 row.append(&field(naive_date_time.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.day(), 2));
-                                row.append(&space_divider);
+                                row.append(&space_divider());
                                 let entry = focused_field(naive_date_time.hour(), 2);
-                                row.append(&time_divider);
+                                row.append(&time_divider());
                                 row.append(&field(naive_date_time.minute(), 2));
                                 entry
                             }
                             DateTimeFieldType::Minute => {
                                 row.append(&field(naive_date_time.year() as u32, 4));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.month(), 2));
-                                row.append(&date_divider);
+                                row.append(&date_divider());
                                 row.append(&field(naive_date_time.day(), 2));
-                                row.append(&space_divider);
+                                row.append(&space_divider());
                                 row.append(&field(naive_date_time.hour(), 2));
-                                row.append(&time_divider);
+                                row.append(&time_divider());
                                 let entry = focused_field(naive_date_time.minute(), 2);
                                 entry
                             }
                         }
                     } else {
                         row.append(&field(naive_date_time.year() as u32, 4));
-                        row.append(&date_divider);
+                        row.append(&date_divider());
                         row.append(&field(naive_date_time.month(), 2));
-                        row.append(&date_divider);
+                        row.append(&date_divider());
                         row.append(&field(naive_date_time.day(), 2));
-                        row.append(&space_divider);
+                        row.append(&space_divider());
                         row.append(&field(naive_date_time.hour(), 2));
-                        row.append(&time_divider);
+                        row.append(&time_divider());
                         row.append(&field(naive_date_time.minute(), 2));
                         None
                     }
