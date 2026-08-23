@@ -1,5 +1,6 @@
 use std::iter;
 
+use chrono::{Datelike, Timelike};
 use gtk4::{
     Align, Box, Entry, Grid, Label, Orientation,
     prelude::{BoxExt, EditableExt, EntryExt, GridExt, WidgetExt},
@@ -7,12 +8,14 @@ use gtk4::{
 
 use crate::{
     config::keybinds::Action,
-    state::{State, details::Details, diff::SingleDiff, utils::parse_from_str},
+    state::{State, details::Details, diff::SingleDiff},
     ui::{
         calendar::MonthCalendar,
         state::{
             Focus, Mode, Tab, UIState,
-            editor::{EditItem, EditorField, EditorState},
+            editor::{
+                DateFieldType, DateTimeFieldType, EditItem, EditorField, EditorState, TimeField,
+            },
         },
     },
 };
@@ -448,33 +451,33 @@ impl Widget {
         };
         self.agenda_title.set_text(title);
 
-        let fields = EditorField::ALL;
         let active = editor.is_editing();
         let selected_field = editor.selected_field.0;
 
-        fields.iter().for_each(|field| {
+        fn gen_label(text: &str, selected: bool) -> Box {
             let row = Box::new(Orientation::Horizontal, 8);
             row.add_css_class("editor-field-row");
 
-            let selected = *field == selected_field;
             if selected {
                 row.add_css_class("editor-field-row-selected");
             }
-
-            let label = Label::new(Some(field.label(is_event)));
+            let label = Label::new(Some(text));
             label.set_halign(Align::Start);
             label.add_css_class("editor-field-label");
             row.append(&label);
+            row
+        }
 
-            let val = editor.get_field_value(*field);
-
+        let display_string = |label: EditorField, val: &str| {
+            let selected = label == selected_field;
+            let row = gen_label(label.label(is_event), selected);
             let entry = if selected && active {
                 let entry = Entry::builder().text(val).hexpand(true).build();
                 entry.add_css_class("editor-entry");
 
+                let entry2 = entry.clone();
                 let ui_state = self.ui_state.clone();
                 let widget = self.clone();
-                let entry2 = entry.clone();
 
                 entry.connect_activate(move |_| {
                     let new = entry2.text().to_string();
@@ -498,17 +501,143 @@ impl Widget {
                 entry.grab_focus();
                 entry.set_position(-1);
             }
-        });
-
-        let hint = if active {
-            "[Enter] Save, [Esc] Cancel field edit"
-        } else {
-            "[Up/Down] Select field, [e] Edit field, [Enter] Save, [Esc] Discard & Exit"
         };
-        let label = Label::new(Some(hint));
-        label.set_halign(Align::Start);
-        label.add_css_class("editor-hints");
-        self.agenda.append(&label);
+        let display_time = |label: EditorField, val: &TimeField| {
+            let field = |value: u32, width: usize| Label::new(Some(&format!("{:0width$}", value)));
+            let focused_field = |value: u32, width: i32| -> Entry {
+                let entry = Entry::new();
+                entry.set_width_chars(width);
+                entry.set_max_length(width);
+                entry.set_text(&value.to_string());
+                entry
+            };
+            let date_divider = Label::new(Some("/"));
+            let time_divider = Label::new(Some(":"));
+            let space_divider = Label::new(Some(" "));
+            let selected = label == selected_field;
+            let row = gen_label(label.label(is_event), selected);
+            if let Some(entry) = match val {
+                TimeField::None => None,
+                TimeField::Date(naive_date, date_field_type) => match &date_field_type {
+                    DateFieldType::Year => {
+                        let entry = focused_field(naive_date.year() as u32, 4);
+                        row.append(&entry);
+                        row.append(&date_divider);
+                        row.append(&field(naive_date.month(), 2));
+                        row.append(&date_divider);
+                        row.append(&field(naive_date.day(), 2));
+                        Some(entry)
+                    }
+                    DateFieldType::Month => {
+                        let entry = focused_field(naive_date.month(), 2);
+                        row.append(&field(naive_date.year() as u32, 4));
+                        row.append(&date_divider);
+                        row.append(&entry);
+                        row.append(&date_divider);
+                        row.append(&field(naive_date.day(), 2));
+                        Some(entry)
+                    }
+                    DateFieldType::Day => {
+                        let entry = focused_field(naive_date.day(), 2);
+                        row.append(&field(naive_date.year() as u32, 4));
+                        row.append(&date_divider);
+                        row.append(&field(naive_date.month(), 2));
+                        row.append(&date_divider);
+                        row.append(&entry);
+                        Some(entry)
+                    }
+                },
+                TimeField::DateTime(naive_date_time, date_time_field_type) => {
+                    match date_time_field_type {
+                        DateTimeFieldType::Year => {
+                            let entry = focused_field(naive_date_time.year() as u32, 4);
+                            row.append(&entry);
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.month(), 2));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.day(), 2));
+                            row.append(&space_divider);
+                            row.append(&field(naive_date_time.hour(), 2));
+                            row.append(&time_divider);
+                            row.append(&field(naive_date_time.minute(), 2));
+                            Some(entry)
+                        }
+                        DateTimeFieldType::Month => {
+                            let entry = focused_field(naive_date_time.month(), 2);
+                            row.append(&field(naive_date_time.year() as u32, 4));
+                            row.append(&date_divider);
+                            row.append(&entry);
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.day(), 2));
+                            row.append(&space_divider);
+                            row.append(&field(naive_date_time.hour(), 2));
+                            row.append(&time_divider);
+                            row.append(&field(naive_date_time.minute(), 2));
+                            Some(entry)
+                        }
+                        DateTimeFieldType::Day => {
+                            let entry = focused_field(naive_date_time.day(), 2);
+                            row.append(&field(naive_date_time.year() as u32, 4));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.month(), 2));
+                            row.append(&date_divider);
+                            row.append(&entry);
+                            row.append(&space_divider);
+                            row.append(&field(naive_date_time.hour(), 2));
+                            row.append(&time_divider);
+                            row.append(&field(naive_date_time.minute(), 2));
+                            Some(entry)
+                        }
+                        DateTimeFieldType::Hour => {
+                            let entry = focused_field(naive_date_time.hour(), 2);
+                            row.append(&field(naive_date_time.year() as u32, 4));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.month(), 2));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.day(), 2));
+                            row.append(&space_divider);
+                            row.append(&entry);
+                            row.append(&time_divider);
+                            row.append(&field(naive_date_time.minute(), 2));
+                            Some(entry)
+                        }
+                        DateTimeFieldType::Minute => {
+                            let entry = focused_field(naive_date_time.minute(), 2);
+                            row.append(&field(naive_date_time.year() as u32, 4));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.month(), 2));
+                            row.append(&date_divider);
+                            row.append(&field(naive_date_time.day(), 2));
+                            row.append(&space_divider);
+                            row.append(&field(naive_date_time.hour(), 2));
+                            row.append(&time_divider);
+                            row.append(&entry);
+                            Some(entry)
+                        }
+                    }
+                }
+            } {
+                let ui_state = self.ui_state.clone();
+                let widget = self.clone();
+                entry.add_css_class("editor-entry");
+                entry.grab_focus();
+                entry.set_position(-1);
+                let entry2 = entry.clone();
+
+                entry.connect_activate(move |_| {
+                    let new = entry2.text().to_string();
+                    ui_state.editor_stop_write(new, true);
+                    widget.update();
+                });
+            };
+            self.agenda.append(&row);
+        };
+
+        display_string(EditorField::Summary, &editor.summary);
+        display_time(EditorField::Start, &editor.start);
+        display_time(EditorField::End, &editor.end);
+        display_string(EditorField::Location, &editor.location);
+        display_string(EditorField::Description, &editor.desc);
     }
 
     pub fn cycle_calendar(&self, right: bool) {

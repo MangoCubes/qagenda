@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
 use icalendar::{CalendarDateTime, DatePerhapsTime};
 
 use crate::state::{event::EventItem, task::TaskItem, utils::get_naive_datetime};
@@ -19,6 +19,7 @@ pub enum DateTimeFieldType {
     Minute,
 }
 
+/// Used for storing both the value of that field as well as the field that is currently being edited
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimeField {
     None,
@@ -144,13 +145,43 @@ impl EditorState {
         self.selected_field.1
     }
 
-    pub fn set_field_value(&mut self, value: String) {
+    pub fn set_field_value(&mut self, value: String) -> Result<(), String> {
+        let update_time = |time: &mut TimeField| -> Result<(), String> {
+            let Ok(v) = value.parse() else {
+                return Err("Invalid number!".into());
+            };
+            match time {
+                TimeField::None => unreachable!(),
+                TimeField::Date(nd, t) => {
+                    let Some(new) = (match t {
+                        DateFieldType::Year => nd.with_year(v),
+                        DateFieldType::Month => nd.with_month(v as u32),
+                        DateFieldType::Day => nd.with_day(v as u32),
+                    }) else {
+                        return Err("Invalid value!".into());
+                    };
+                    Ok(*nd = new)
+                }
+                TimeField::DateTime(ndt, t) => {
+                    let Some(new) = (match t {
+                        DateTimeFieldType::Year => ndt.with_year(v),
+                        DateTimeFieldType::Month => ndt.with_month(v as u32),
+                        DateTimeFieldType::Day => ndt.with_day(v as u32),
+                        DateTimeFieldType::Hour => ndt.with_hour(v as u32),
+                        DateTimeFieldType::Minute => ndt.with_minute(v as u32),
+                    }) else {
+                        return Err("Invalid value!".into());
+                    };
+                    Ok(*ndt = new)
+                }
+            }
+        };
         match self.selected_field.0 {
-            EditorField::Summary => self.summary = value,
-            EditorField::Start => todo!(),
-            EditorField::End => todo!(),
-            EditorField::Location => self.location = value,
-            EditorField::Description => self.desc = value,
+            EditorField::Summary => Ok(self.summary = value),
+            EditorField::Start => update_time(&mut self.start),
+            EditorField::End => update_time(&mut self.end),
+            EditorField::Location => Ok(self.location = value),
+            EditorField::Description => Ok(self.desc = value),
         }
     }
 }
