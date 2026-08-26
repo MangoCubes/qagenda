@@ -531,6 +531,7 @@ impl Widget {
             let date_divider = || Label::new(Some("/"));
             let time_divider = || Label::new(Some(":"));
             let space_divider = || Label::new(Some(" "));
+            self.agenda.append(&row);
             if let Some(entry) = match val {
                 TimeField::None => None,
                 TimeField::Date(naive_date, date_field_type) => match &date_field_type {
@@ -636,8 +637,7 @@ impl Widget {
                     ui_state.editor_stop_write(new, true);
                     widget.update();
                 });
-            };
-            self.agenda.append(&row);
+            }
         };
 
         display_string(EditorField::Summary, &editor.summary);
