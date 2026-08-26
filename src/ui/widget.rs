@@ -503,7 +503,11 @@ impl Widget {
             }
         };
         let display_time = |label: EditorField, val: &TimeField| {
-            let field = |value: u32, width: usize| Label::new(Some(&format!("{:0width$}", value)));
+            let field = |value: u32, width: usize| {
+                let l = Label::new(Some(&format!("{:0width$}", value)));
+                l.add_css_class("editor-field");
+                l
+            };
             let selected = label == selected_field;
             let row = gen_label(label.label(is_event), selected);
             let focused_field = |value: u32, width: i32| -> Option<Entry> {

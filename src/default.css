@@ -91,6 +91,7 @@ label {
 
 .editor-field-row {
 	border: 1px solid transparent;
+	padding: 4px;
 }
 
 .editor-field-row-selected {
@@ -98,9 +99,15 @@ label {
 	background: rgba(71, 200, 192, 0.3);
 }
 
+.editor-field {
+	border: 1px solid transparent;
+	padding: 4px;
+}
+
 .editor-field-selected {
 	border: 1px solid rgba(71, 200, 192, 1);
 	background: rgba(71, 200, 192, 0.3);
+	padding: 4px;
 }
 
 .editor-field-label {
