@@ -515,6 +515,7 @@ impl Widget {
                     let entry = Entry::new();
                     entry.set_text(&value.to_string());
                     entry.set_width_chars(width);
+                    entry.set_max_width_chars(width);
                     entry.set_max_length(width);
                     row.append(&entry);
                     Some(entry)
