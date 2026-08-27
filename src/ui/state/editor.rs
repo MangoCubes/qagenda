@@ -1,9 +1,13 @@
-use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
+use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, Timelike};
 use icalendar::{CalendarDateTime, DatePerhapsTime};
 
 use crate::{
     config::keybinds::Direction,
-    state::{event::EventItem, task::TaskItem, utils::get_naive_datetime},
+    state::{
+        event::EventItem,
+        task::TaskItem,
+        utils::{dpt_to_naive_datetime, get_naive_datetime},
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,6 +93,50 @@ impl TimeField {
 pub enum EditItem {
     Event(EventItem),
     Task(TaskItem),
+}
+
+impl EditItem {
+    fn start(&self) -> &Option<DatePerhapsTime> {
+        match self {
+            EditItem::Event(event_item) => &event_item.start,
+            EditItem::Task(task_item) => &task_item.start,
+        }
+    }
+
+    fn end(&self) -> &Option<DatePerhapsTime> {
+        match self {
+            EditItem::Event(event_item) => &event_item.end,
+            EditItem::Task(task_item) => &task_item.due,
+        }
+    }
+
+    pub fn start_date(&self) -> NaiveDate {
+        match self.start() {
+            Some(d) => dpt_to_naive_datetime(d).date(),
+            None => Local::now().date_naive(),
+        }
+    }
+
+    pub fn end_date(&self) -> NaiveDate {
+        match self.end() {
+            Some(d) => dpt_to_naive_datetime(d).date(),
+            None => Local::now().date_naive(),
+        }
+    }
+
+    pub fn start_dt(&self) -> NaiveDateTime {
+        match self.start() {
+            Some(d) => dpt_to_naive_datetime(d),
+            None => Local::now().naive_local(),
+        }
+    }
+
+    pub fn end_dt(&self) -> NaiveDateTime {
+        match self.end() {
+            Some(d) => dpt_to_naive_datetime(d),
+            None => Local::now().naive_local(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -267,8 +315,42 @@ impl EditorState {
 
     pub fn cycle_time_field(&mut self) {
         match self.selected_field.0 {
-            EditorField::Start => self.start = self.start.cycle_type(),
-            EditorField::End => self.end = self.end.cycle_type(),
+            EditorField::Start => {
+                self.start = match self.start {
+                    TimeField::None => {
+                        TimeField::DateTime(self.orig.start_dt(), DateTimeFieldType::Year)
+                    }
+                    TimeField::Date(_, _) => TimeField::None,
+                    TimeField::DateTime(ndt, field) => TimeField::Date(
+                        ndt.date(),
+                        match field {
+                            DateTimeFieldType::Year => DateFieldType::Year,
+                            DateTimeFieldType::Month => DateFieldType::Month,
+                            DateTimeFieldType::Day => DateFieldType::Day,
+                            DateTimeFieldType::Hour => DateFieldType::Year,
+                            DateTimeFieldType::Minute => DateFieldType::Year,
+                        },
+                    ),
+                }
+            }
+            EditorField::End => {
+                self.end = match self.end {
+                    TimeField::None => {
+                        TimeField::DateTime(self.orig.end_dt(), DateTimeFieldType::Year)
+                    }
+                    TimeField::Date(_, _) => TimeField::None,
+                    TimeField::DateTime(ndt, field) => TimeField::Date(
+                        ndt.date(),
+                        match field {
+                            DateTimeFieldType::Year => DateFieldType::Year,
+                            DateTimeFieldType::Month => DateFieldType::Month,
+                            DateTimeFieldType::Day => DateFieldType::Day,
+                            DateTimeFieldType::Hour => DateFieldType::Year,
+                            DateTimeFieldType::Minute => DateFieldType::Year,
+                        },
+                    ),
+                }
+            }
             _ => (),
         }
     }

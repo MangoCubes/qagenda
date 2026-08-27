@@ -123,6 +123,10 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
                                 widget2.ui_state.stop_edit();
                                 widget2.update();
                             }
+                            Action::Expand => {
+                                widget2.ui_state.editor_cycle_time();
+                                widget2.update();
+                            }
                             _ => {}
                         };
                         Propagation::Stop

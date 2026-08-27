@@ -282,6 +282,13 @@ impl UIState {
         }
     }
 
+    pub fn editor_cycle_time(&self) {
+        let mut guard = self.inner.write().unwrap();
+        if let Mode::Edit(editor) = &mut guard.mode {
+            editor.cycle_time_field();
+        }
+    }
+
     pub fn editor_write(&self) {
         let mut guard = self.inner.write().unwrap();
         if let Mode::Edit(editor) = &mut guard.mode {
