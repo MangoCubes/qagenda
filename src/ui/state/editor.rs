@@ -256,4 +256,20 @@ impl EditorState {
             EditorField::Description => Ok(self.desc = value),
         }
     }
+
+    pub fn edit_field(&mut self) {
+        self.selected_field.1 = match self.selected_field.0 {
+            EditorField::Start => !matches!(self.start, TimeField::None),
+            EditorField::End => !matches!(self.end, TimeField::None),
+            _ => true,
+        };
+    }
+
+    pub fn cycle_time_field(&mut self) {
+        match self.selected_field.0 {
+            EditorField::Start => self.start = self.start.cycle_type(),
+            EditorField::End => self.end = self.end.cycle_type(),
+            _ => (),
+        }
+    }
 }
