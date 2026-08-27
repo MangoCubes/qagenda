@@ -533,7 +533,11 @@ impl Widget {
             let space_divider = || Label::new(Some(" "));
             self.agenda.append(&row);
             if let Some(entry) = match val {
-                TimeField::None => None,
+                TimeField::None => {
+                    let label = Label::new(Some("(none)"));
+                    row.append(&label);
+                    None
+                }
                 TimeField::Date(naive_date, date_field_type) => match &date_field_type {
                     DateFieldType::Year => {
                         let entry = focused_field(naive_date.year() as u32, 4);
