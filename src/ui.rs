@@ -64,7 +64,11 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let divider = Separator::builder().build();
     vbox.append(&divider);
 
-    let widget = Widget::new(ui_state, state);
+    let keybinds = config.keybinds.clone();
+    let on_close = config.on_close.clone();
+    let on_write = config.on_write.clone();
+
+    let widget = Widget::new(config, ui_state, state);
     vbox.append(&widget.cal_box);
 
     let divider = Separator::builder().build();
@@ -75,10 +79,7 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
     let ckey = EventControllerKey::new();
     let app2 = app.clone();
     let window2 = window.clone();
-    let keybinds = config.keybinds.clone();
     let widget2 = widget.clone();
-    let on_close = config.on_close.clone();
-    let on_write = config.on_write.clone();
 
     fn run_cmd(cmd: &String) {
         match Command::new("sh").arg("-c").arg(cmd).spawn() {

@@ -255,11 +255,11 @@ impl EditorState {
         }
     }
 
-    pub fn new_event(path: PathBuf, cal: String) -> Self {
+    pub fn new_event(path: &PathBuf, cal: String) -> Self {
         Self::new(EditItem::Event(EventItem::create(path, cal)), true)
     }
 
-    pub fn new_task(path: PathBuf, cal: String) -> Self {
+    pub fn new_task(path: &PathBuf, cal: String) -> Self {
         Self::new(EditItem::Task(TaskItem::create(path, cal)), true)
     }
 

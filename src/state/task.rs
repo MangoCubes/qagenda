@@ -38,8 +38,8 @@ impl TaskItem {
     }
 
     /// Create a new task from scratch
-    /// The [`path`] variable is the path to the calendar directory
-    pub fn create(path: PathBuf, cal: String) -> Self {
+    /// The [`path`] variable is the path to the directory that contains all calendars
+    pub fn create(path: &PathBuf, cal: String) -> Self {
         let uid = Uuid::new_v4().to_string();
         Self {
             path: path.join(&cal).join(format!("{}.ics", uid)),

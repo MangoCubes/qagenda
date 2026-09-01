@@ -7,7 +7,10 @@ use gtk4::{
 };
 
 use crate::{
-    config::keybinds::{Action, Direction},
+    config::{
+        Config,
+        keybinds::{Action, Direction},
+    },
     state::{State, details::Details, diff::SingleDiff},
     ui::{
         calendar::MonthCalendar,
@@ -31,10 +34,11 @@ pub struct Widget {
     pub cal_indicator: Box,
     pub ui_state: UIState,
     pub state: State,
+    pub config: Config,
 }
 
 impl Widget {
-    pub fn new(ui_state: UIState, state: State) -> Self {
+    pub fn new(config: Config, ui_state: UIState, state: State) -> Self {
         let cal_title = Label::new(None);
         cal_title.set_halign(Align::Center);
         cal_title.add_css_class("section-title");
@@ -72,6 +76,7 @@ impl Widget {
             cal_indicator,
             ui_state,
             state,
+            config,
         };
 
         widget.init_indicators();
@@ -344,8 +349,8 @@ impl Widget {
             return;
         };
         let editor = match self.ui_state.tab() {
-            Tab::Events { .. } => EditorState::new_event(cal),
-            Tab::Tasks { .. } => EditorState::new_task(cal),
+            Tab::Events { .. } => EditorState::new_event(&self.config.dir, cal),
+            Tab::Tasks { .. } => EditorState::new_task(&self.config.dir, cal),
         };
         self.ui_state.start_new(editor);
     }
