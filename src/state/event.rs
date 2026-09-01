@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::path::PathBuf;
 
 use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
@@ -20,6 +21,7 @@ pub struct EventItem {
     pub end: Option<DatePerhapsTime>,
     pub details: Details,
     pub uid: UUID,
+    pub path: PathBuf,
 }
 
 impl EventItem {
@@ -62,6 +64,7 @@ impl EventItem {
             (None, None) => "No time set".to_string(),
         }
     }
+
     fn new(
         cal: String,
         uid: String,
@@ -69,6 +72,7 @@ impl EventItem {
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
         details: Details,
+        path: PathBuf,
     ) -> Self {
         Self {
             cal,
@@ -78,21 +82,27 @@ impl EventItem {
             start,
             end,
             details,
+            path,
         }
     }
 
-    pub fn create(cal: String) -> Self {
+    /// Create a new task from scratch
+    /// The [`path`] variable is the path to the calendar directory
+    pub fn create(path: PathBuf, cal: String) -> Self {
+        let uid = Uuid::new_v4().to_string();
+        let path = path.join(&cal).join(format!("{}.ics", uid));
         Self::new(
             cal,
-            Uuid::new_v4().to_string(),
+            uid,
             String::new(),
             None,
             None,
             Details::new(None, None),
+            path,
         )
     }
 
-    pub fn from(cal: String, event: &Event) -> Self {
+    pub fn from(path: PathBuf, cal: String, event: &Event) -> Self {
         Self::new(
             cal,
             event
@@ -106,6 +116,7 @@ impl EventItem {
                 event.get_location().map(str::to_string),
                 event.get_description().map(str::to_string),
             ),
+            path,
         )
     }
 
@@ -114,6 +125,7 @@ impl EventItem {
         event: &Event,
         start: DatePerhapsTime,
         end: Option<DatePerhapsTime>,
+        path: PathBuf,
     ) -> Self {
         Self::new(
             cal,
@@ -128,6 +140,7 @@ impl EventItem {
                 event.get_location().map(str::to_string),
                 event.get_description().map(str::to_string),
             ),
+            path,
         )
     }
 

@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::path::PathBuf;
 
 use chrono::Local;
 use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
@@ -22,6 +23,7 @@ pub struct TaskItem {
     pub start: Option<DatePerhapsTime>,
     pub details: Details,
     pub uid: String,
+    pub path: PathBuf,
 }
 
 impl TaskItem {
@@ -35,8 +37,12 @@ impl TaskItem {
         self.duetxt = Self::gen_duetxt(&self.due);
     }
 
-    pub fn create(cal: String) -> Self {
+    /// Create a new task from scratch
+    /// The [`path`] variable is the path to the calendar directory
+    pub fn create(path: PathBuf, cal: String) -> Self {
+        let uid = Uuid::new_v4().to_string();
         Self {
+            path: path.join(&cal).join(format!("{}.ics", uid)),
             cal,
             summary: String::new(),
             completed: false,
@@ -45,11 +51,13 @@ impl TaskItem {
             due: None,
             start: None,
             details: Details::new(None, None),
-            uid: Uuid::new_v4().to_string(),
+            uid,
         }
     }
 
-    pub fn new(cal: String, task: &Todo) -> Self {
+    /// Create a [`TaskItem`] object from a [`Todo`] object
+    /// The [`path`] variable is the path to the [`Todo`] item file
+    pub fn new(path: PathBuf, cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
         let summary = task.get_summary().unwrap_or("Untitled Task").to_string();
@@ -79,6 +87,7 @@ impl TaskItem {
                 .property_value("UID")
                 .map(|s| s.to_string())
                 .expect("Task without UID is not supported!"),
+            path,
         }
     }
 
