@@ -1,16 +1,14 @@
 use std::cmp::Ordering;
-use std::path::PathBuf;
 
 use chrono::{Days, Local};
 use icalendar::{Component, DatePerhapsTime, Event, EventLike};
-use uuid::Uuid;
 
 use crate::state::details::Details;
 use crate::state::diff::SingleDiff;
 use crate::state::utils::{
     dpt_to_naive_datetime, format_date_perhaps_time, format_time_only, get_naive_date,
 };
-use crate::types::UUID;
+use crate::types::{CalsPath, ItemPath, UUID};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventItem {
@@ -21,7 +19,7 @@ pub struct EventItem {
     pub end: Option<DatePerhapsTime>,
     pub details: Details,
     pub uid: UUID,
-    pub path: PathBuf,
+    pub path: ItemPath,
 }
 
 impl EventItem {
@@ -72,7 +70,7 @@ impl EventItem {
         start: Option<DatePerhapsTime>,
         end: Option<DatePerhapsTime>,
         details: Details,
-        path: PathBuf,
+        path: ItemPath,
     ) -> Self {
         Self {
             cal,
@@ -88,9 +86,8 @@ impl EventItem {
 
     /// Create a new task from scratch
     /// The [`path`] variable is the path to the directory that contains all calendars
-    pub fn create(path: &PathBuf, cal: String) -> Self {
-        let uid = Uuid::new_v4().to_string();
-        let path = path.join(&cal).join(format!("{}.ics", uid));
+    pub fn create(path: &CalsPath, cal: String) -> Self {
+        let (itempath, uid) = path.new_item(&cal);
         Self::new(
             cal,
             uid,
@@ -98,11 +95,11 @@ impl EventItem {
             None,
             None,
             Details::new(None, None),
-            path,
+            itempath,
         )
     }
 
-    pub fn from(path: PathBuf, cal: String, event: &Event) -> Self {
+    pub fn from(path: ItemPath, cal: String, event: &Event) -> Self {
         Self::new(
             cal,
             event
@@ -125,7 +122,7 @@ impl EventItem {
         event: &Event,
         start: DatePerhapsTime,
         end: Option<DatePerhapsTime>,
-        path: PathBuf,
+        path: ItemPath,
     ) -> Self {
         Self::new(
             cal,

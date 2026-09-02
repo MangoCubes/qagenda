@@ -1,15 +1,13 @@
-use std::cmp::Ordering;
-use std::path::PathBuf;
-
 use chrono::Local;
 use icalendar::{Component, DatePerhapsTime, EventLike, Todo, TodoStatus};
+use std::cmp::Ordering;
 
 use chrono::NaiveDateTime;
-use uuid::Uuid;
 
 use crate::state::details::Details;
 use crate::state::diff::SingleDiff;
 use crate::state::utils::{dpt_to_naive_datetime, format_date_perhaps_time, get_naive_date};
+use crate::types::{CalsPath, ItemPath};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskItem {
@@ -23,7 +21,7 @@ pub struct TaskItem {
     pub start: Option<DatePerhapsTime>,
     pub details: Details,
     pub uid: String,
-    pub path: PathBuf,
+    pub path: ItemPath,
 }
 
 impl TaskItem {
@@ -39,10 +37,10 @@ impl TaskItem {
 
     /// Create a new task from scratch
     /// The [`path`] variable is the path to the directory that contains all calendars
-    pub fn create(path: &PathBuf, cal: String) -> Self {
-        let uid = Uuid::new_v4().to_string();
+    pub fn create(path: &CalsPath, cal: String) -> Self {
+        let (itempath, uid) = path.new_item(&cal);
         Self {
-            path: path.join(&cal).join(format!("{}.ics", uid)),
+            path: itempath,
             cal,
             summary: String::new(),
             completed: false,
@@ -57,7 +55,7 @@ impl TaskItem {
 
     /// Create a [`TaskItem`] object from a [`Todo`] object
     /// The [`path`] variable is the path to the [`Todo`] item file
-    pub fn new(path: PathBuf, cal: String, task: &Todo) -> Self {
+    pub fn new(path: ItemPath, cal: String, task: &Todo) -> Self {
         let completed = task.get_completed().is_some()
             || matches!(task.get_status(), Some(TodoStatus::Completed));
         let summary = task.get_summary().unwrap_or("Untitled Task").to_string();
