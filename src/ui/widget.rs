@@ -405,6 +405,7 @@ impl Widget {
                         end,
                         loc,
                         desc,
+                        &self.config.dir,
                     );
                 }
                 EditItem::Task(t) => {
@@ -414,6 +415,7 @@ impl Widget {
                         end,
                         loc,
                         desc,
+                        &self.config.dir,
                     );
                 }
             }

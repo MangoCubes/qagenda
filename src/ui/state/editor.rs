@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, Timelike};
 use icalendar::{CalendarDateTime, DatePerhapsTime};
 
@@ -10,6 +8,7 @@ use crate::{
         task::TaskItem,
         utils::{dpt_to_naive_datetime, get_naive_datetime},
     },
+    types::CalsPath,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -255,11 +254,11 @@ impl EditorState {
         }
     }
 
-    pub fn new_event(path: &PathBuf, cal: String) -> Self {
+    pub fn new_event(path: &CalsPath, cal: String) -> Self {
         Self::new(EditItem::Event(EventItem::create(path, cal)), true)
     }
 
-    pub fn new_task(path: &PathBuf, cal: String) -> Self {
+    pub fn new_task(path: &CalsPath, cal: String) -> Self {
         Self::new(EditItem::Task(TaskItem::create(path, cal)), true)
     }
 

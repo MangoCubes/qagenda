@@ -4,10 +4,20 @@ use std::sync::{Arc, RwLock};
 use icalendar::DatePerhapsTime;
 
 use crate::state::details::Details;
+use crate::types::CalsPath;
 use crate::{
     state::{event::EventItem, task::TaskItem},
     types::UUID,
 };
+
+struct CalDiff {
+    pub new_events: Vec<EventItem>,
+    pub new_tasks: Vec<TaskItem>,
+    pub events: HashMap<UUID, (EventItem, EventItem)>,
+    pub tasks: HashMap<UUID, (TaskItem, TaskItem)>,
+    pub deleted_events: Vec<UUID>,
+    pub deleted_tasks: Vec<UUID>,
+}
 
 #[derive(Debug, Clone)]
 struct InnerDiff {
@@ -249,8 +259,9 @@ impl Diff {
         end: Option<DatePerhapsTime>,
         location: Option<String>,
         description: Option<String>,
+        path: &CalsPath,
     ) {
-        let mut e = EventItem::create(cal.clone());
+        let mut e = EventItem::create(path, cal.clone());
         e.details = Details::new(location, description);
         e.summary = summary;
         e.start = start;
@@ -273,8 +284,9 @@ impl Diff {
         due: Option<DatePerhapsTime>,
         location: Option<String>,
         description: Option<String>,
+        path: &CalsPath,
     ) {
-        let mut t = TaskItem::create(cal.clone());
+        let mut t = TaskItem::create(path, cal.clone());
         t.details = Details::new(location, description);
         t.summary = summary;
         t.due = due;
@@ -327,6 +339,32 @@ impl Diff {
                 .iter()
                 .map(|(_, e)| e.clone())
                 .flatten()
+                .collect(),
+        }
+    }
+
+    pub fn get_cal_diff(&self, cal: &str) -> CalDiff {
+        let guard = self.inner.read().unwrap();
+        CalDiff {
+            new_events: guard.new_events.get(cal).cloned().unwrap_or_default(),
+            new_tasks: guard.new_tasks.get(cal).cloned().unwrap_or_default(),
+            events: guard.events.get(cal).cloned().unwrap_or_default(),
+            tasks: guard.tasks.get(cal).cloned().unwrap_or_default(),
+            deleted_events: guard
+                .deleted_events
+                .get(cal)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(uuid, _)| uuid)
+                .collect(),
+            deleted_tasks: guard
+                .deleted_tasks
+                .get(cal)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(uuid, _)| uuid)
                 .collect(),
         }
     }

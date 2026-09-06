@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{config::keybinds::KeyBinds, ui::state::UIState};
+use crate::{config::keybinds::KeyBinds, types::CalsPath, ui::state::UIState};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -24,7 +24,7 @@ pub enum Anchor {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Config {
-    pub dir: PathBuf,
+    pub dir: CalsPath,
     pub expand: bool,
     pub anchor: Anchor,
     pub css: String,
@@ -59,9 +59,11 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         #[cfg(debug_assertions)]
-        let dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("events");
+        let dir =
+            CalsPath(PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("events"));
         #[cfg(not(debug_assertions))]
-        let dir = PathBuf::from(std::env::var("HOME").expect("No home???")).join(".calendar");
+        let dir =
+            CalsPath(PathBuf::from(std::env::var("HOME").expect("No home???")).join(".calendar"));
         Self {
             dir,
             expand: true,
