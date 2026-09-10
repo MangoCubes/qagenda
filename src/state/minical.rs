@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use chrono::{Days, Local, NaiveTime, TimeDelta, TimeZone};
-use icalendar::{Calendar, Component, DatePerhapsTime, EventLike, Tz};
+use icalendar::{CalendarComponent, Component, DatePerhapsTime, EventLike, Tz};
 
 use crate::{
     state::{
@@ -9,7 +9,7 @@ use crate::{
         task::TaskItem,
         utils::{get_naive_date, get_naive_datetime, is_past_event},
     },
-    types::UUID,
+    types::{ItemPath, UUID},
 };
 
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ pub struct MiniCal {
 impl MiniCal {
     pub fn from_calendar(
         cal_name: String,
-        cal: &Calendar,
+        cal: HashMap<PathBuf, Vec<CalendarComponent>>,
         max_recurrence_count: u32,
         max_recurrence_date: u32,
     ) -> Self {
@@ -55,8 +55,25 @@ impl MiniCal {
         } else {
             None
         };
+        let copied: Vec<(PathBuf, CalendarComponent)> = cal
+            .into_iter()
+            .map(|(path, item)| {
+                item.into_iter()
+                    .map(|c| (path.clone(), c))
+                    .collect::<Vec<(PathBuf, CalendarComponent)>>()
+            })
+            .flatten()
+            .collect();
 
-        cal.events().for_each(|event| {
+        let (mut e, mut t) = (vec![], vec![]);
+
+        copied.into_iter().for_each(|(path, c)| match c {
+            CalendarComponent::Todo(todo) => t.push((ItemPath(path), todo)),
+            CalendarComponent::Event(event) => e.push((ItemPath(path), event)),
+            _ => {}
+        });
+
+        e.into_iter().for_each(|(path, event)| {
             if event.property_value("RRULE").is_some() {
                 match event.get_recurrence() {
                     Ok(rrule) => {
@@ -70,16 +87,27 @@ impl MiniCal {
                         };
                         if result.dates.is_empty() {
                             // All occurrences are in the past
-                            past_events.push(EventItem::from(cal_name.clone(), event));
+                            past_events.push(EventItem::from(
+                                path.clone(),
+                                cal_name.clone(),
+                                &event,
+                            ));
                         } else {
                             let items = match event.get_end() {
                                 Some(end) => {
                                     let Some(start) = event.get_start() else {
-                                        if is_past_event(event) {
-                                            past_events
-                                                .push(EventItem::from(cal_name.clone(), event));
+                                        if is_past_event(&event) {
+                                            past_events.push(EventItem::from(
+                                                path,
+                                                cal_name.clone(),
+                                                &event,
+                                            ));
                                         } else {
-                                            events.push(EventItem::from(cal_name.clone(), event));
+                                            events.push(EventItem::from(
+                                                path,
+                                                cal_name.clone(),
+                                                &event,
+                                            ));
                                         };
                                         return;
                                     };
@@ -103,9 +131,10 @@ impl MiniCal {
                                             let s = start.naive_local();
                                             EventItem::with_custom_time(
                                                 cal_name.clone(),
-                                                event,
+                                                &event,
                                                 s.into(),
                                                 Some((s + duration).into()),
+                                                path.clone(),
                                             )
                                         })
                                         .collect::<Vec<EventItem>>()
@@ -118,9 +147,10 @@ impl MiniCal {
                                         .map(|start| {
                                             EventItem::with_custom_time(
                                                 cal_name.clone(),
-                                                event,
+                                                &event,
                                                 start.naive_local().into(),
                                                 None,
+                                                path.clone(),
                                             )
                                         })
                                         .collect::<Vec<EventItem>>()
@@ -136,24 +166,28 @@ impl MiniCal {
                             event.get_summary(),
                             e
                         );
-                        if !is_past_event(event) {
-                            events.push(EventItem::from(cal_name.clone(), event));
+                        if !is_past_event(&event) {
+                            events.push(EventItem::from(path.clone(), cal_name.clone(), &event));
                         } else {
-                            past_events.push(EventItem::from(cal_name.clone(), event));
+                            past_events.push(EventItem::from(
+                                path.clone(),
+                                cal_name.clone(),
+                                &event,
+                            ));
                         }
                     }
                 }
             }
-            if is_past_event(event) {
-                past_events.push(EventItem::from(cal_name.clone(), event));
+            if is_past_event(&event) {
+                past_events.push(EventItem::from(path, cal_name.clone(), &event));
             } else {
-                events.push(EventItem::from(cal_name.clone(), event));
+                events.push(EventItem::from(path, cal_name.clone(), &event));
             }
         });
 
-        let (mut completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) = cal
-            .todos()
-            .map(|t| TaskItem::new(cal_name.clone(), t))
+        let (mut completed_tasks, remaining): (Vec<TaskItem>, Vec<TaskItem>) = t
+            .into_iter()
+            .map(|(p, t)| TaskItem::new(p, cal_name.clone(), &t))
             .partition(|t| t.completed);
         let (mut upcoming_tasks, mut tasks): (Vec<TaskItem>, Vec<TaskItem>) =
             remaining.into_iter().partition(|t| {
