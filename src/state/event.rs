@@ -191,6 +191,25 @@ impl EventItem {
     pub fn rebuild(&mut self) {
         self.duration = Self::gen_duration(&self.start, &self.end);
     }
+
+    pub fn to_event(&self) -> Event {
+        let mut event = Event::new();
+        event.uid(&self.uid);
+        event.summary(&self.summary);
+        if let Some(start) = &self.start {
+            event.starts(start.clone());
+        }
+        if let Some(end) = &self.end {
+            event.ends(end.clone());
+        }
+        if let Some(loc) = &self.details.location {
+            event.location(loc);
+        }
+        if let Some(desc) = &self.details.description {
+            event.description(desc);
+        }
+        event
+    }
 }
 
 impl PartialOrd for EventItem {

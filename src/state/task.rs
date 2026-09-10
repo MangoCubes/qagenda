@@ -112,6 +112,27 @@ impl TaskItem {
             changes,
         }
     }
+
+    pub fn to_todo(&self) -> Todo {
+        let mut todo = Todo::new();
+        todo.uid(&self.uid);
+        todo.summary(&self.summary);
+        if let Some(due) = &self.due {
+            todo.due(due.clone());
+        }
+        todo.status(if self.completed {
+            TodoStatus::Completed
+        } else {
+            TodoStatus::NeedsAction
+        });
+        if let Some(loc) = &self.details.location {
+            todo.location(loc);
+        }
+        if let Some(desc) = &self.details.description {
+            todo.description(desc);
+        }
+        todo
+    }
 }
 
 impl PartialOrd for TaskItem {
