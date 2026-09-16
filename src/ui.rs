@@ -139,9 +139,19 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
             .map_or(Propagation::Proceed, |action| {
                 match action {
                     Action::Yes => {
-                        widget2.state.write_to_disk();
-                        if let Some(cmd) = &on_write {
-                            run_cmd(cmd);
+                        match widget2.state.write_to_disk() {
+                            Ok(_) => {
+                                if let Some(cmd) = &on_write {
+                                    run_cmd(cmd);
+                                }
+                            }
+                            Err(msgs) => {
+                                error!("Failed to save the changes for the following reasons:");
+                                msgs.into_iter().for_each(|msg| error!("{}", msg));
+                                if let Some(_) = &on_write {
+                                    error!("Not running the command due to errors");
+                                }
+                            }
                         }
                         window2.set_visible(false);
                         window2.set_sensitive(false);

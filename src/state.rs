@@ -23,7 +23,6 @@ use crate::{
 #[derive(Clone)]
 pub struct State {
     cal: HashMap<String, MiniCal>,
-    dir: CalsPath,
     dry_run: bool,
     pub pending: Diff,
 }
@@ -122,7 +121,6 @@ impl State {
 
         Self {
             cal,
-            dir,
             dry_run,
             pending: Diff::new(),
         }
@@ -193,17 +191,16 @@ impl State {
         tasks
     }
 
-    pub fn write_to_disk(&self) -> Result<(), String> {
+    pub fn write_to_disk(&self) -> Result<(), Vec<String>> {
         if self.dry_run {
             return Ok(());
         }
 
-        fn write_new(path: &Path, comp: impl Into<CalendarComponent>) {
+        fn write_new(path: &Path, comp: impl Into<CalendarComponent>) -> Result<(), String> {
             let mut cal = Calendar::new();
             cal.push(comp);
-            if let Err(e) = fs::write(path, cal.to_string()) {
-                error!("Failed to write new file {:?}: {}", path, e);
-            }
+            fs::write(path, cal.to_string())
+                .map_err(|e| format!("Failed to write new file {:?}: {}", path, e))
         }
 
         fn get_cal(path: &ItemPath) -> Result<Calendar, String> {
@@ -219,17 +216,15 @@ impl State {
             })
         }
 
-        fn delete_item(path: &ItemPath, uuid: &str) {
-            if let Err(e) = get_cal(path).and_then(|mut cal| {
+        fn delete_item(path: &ItemPath, uuid: &str) -> Result<(), String> {
+            get_cal(path).and_then(|mut cal| {
                 cal.components.retain(|c| get_uid(c) != Some(uuid));
                 if cal.components.is_empty() {
                     fs::remove_file(&path.0).map_err(|e| e.to_string())
                 } else {
                     fs::write(&path.0, cal.to_string()).map_err(|e| e.to_string())
                 }
-            }) {
-                error!("Failed to delete calendar item: {}", e);
-            }
+            })
         }
 
         fn get_uid(c: &CalendarComponent) -> Option<&str> {
@@ -240,36 +235,58 @@ impl State {
             }
         }
 
-        self.cal.keys().into_iter().for_each(|cal| {
-            let diff = self.pending.get_cal_diff(cal);
+        let errs: Vec<String> = self
+            .cal
+            .keys()
+            .into_iter()
+            .map(|cal| {
+                let diff = self.pending.get_cal_diff(cal);
 
-            diff.new_events
-                .into_iter()
-                .for_each(|e| write_new(&e.path.0, e.to_event()));
-            diff.new_tasks
-                .into_iter()
-                .for_each(|t| write_new(&t.path.0, t.to_todo()));
+                let ne: Vec<String> = diff
+                    .new_events
+                    .into_iter()
+                    .filter_map(|e| write_new(&e.path.0, e.to_event()).err())
+                    .collect();
+                let nt: Vec<String> = diff
+                    .new_tasks
+                    .into_iter()
+                    .filter_map(|t| write_new(&t.path.0, t.to_todo()).err())
+                    .collect();
 
-            diff.events
-                .into_iter()
-                .for_each(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
-                    Ok(CalendarComponent::Event(mut e)) => new.write_to(&mut e),
-                    Err(e) => error!("Failed to update event: {}", e),
-                    _ => (),
-                });
-            diff.tasks
-                .into_iter()
-                .for_each(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
-                    Ok(CalendarComponent::Todo(mut e)) => new.write_to(&mut e),
-                    Err(e) => error!("Failed to update task: {}", e),
-                    _ => (),
-                });
-            diff.deleted_events
-                .into_iter()
-                .chain(diff.deleted_tasks)
-                .for_each(|(uuid, path)| delete_item(&path, &uuid));
-        });
-
-        Ok(())
+                let e: Vec<String> = diff
+                    .events
+                    .into_iter()
+                    .filter_map(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
+                        Ok(CalendarComponent::Event(mut e)) => {
+                            new.write_to(&mut e);
+                            None
+                        }
+                        Err(e) => Some(e),
+                        _ => None,
+                    })
+                    .collect();
+                let t: Vec<String> = diff
+                    .tasks
+                    .into_iter()
+                    .filter_map(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
+                        Ok(CalendarComponent::Todo(mut e)) => {
+                            new.write_to(&mut e);
+                            None
+                        }
+                        Err(e) => Some(e),
+                        _ => None,
+                    })
+                    .collect();
+                let d: Vec<String> = diff
+                    .deleted_events
+                    .into_iter()
+                    .chain(diff.deleted_tasks)
+                    .filter_map(|(uuid, path)| delete_item(&path, &uuid).err())
+                    .collect();
+                [&ne[..], &nt[..], &e[..], &t[..], &d[..]].concat()
+            })
+            .flatten()
+            .collect();
+        if errs.len() == 0 { Ok(()) } else { Err(errs) }
     }
 }
