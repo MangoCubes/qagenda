@@ -139,11 +139,10 @@ pub fn build_ui(app: &Application, config: Config, state: State) {
             .map_or(Propagation::Proceed, |action| {
                 match action {
                     Action::Yes => {
-                        // TODO: write changes
+                        widget2.state.write_to_disk();
                         if let Some(cmd) = &on_write {
                             run_cmd(cmd);
                         }
-
                         window2.set_visible(false);
                         window2.set_sensitive(false);
                         app2.quit();
