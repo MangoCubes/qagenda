@@ -19,17 +19,11 @@ pub struct CalPath(pub PathBuf);
 pub struct ItemPath(pub PathBuf);
 
 impl CalsPath {
-    pub fn to_itempath(&self, cal: &str, name: &str) -> ItemPath {
-        ItemPath(self.0.join(&cal).join(format!("{}.ics", name)))
-    }
     pub fn new_item(&self, cal: &str) -> (ItemPath, UUID) {
         let uid = Uuid::new_v4().to_string();
         (
             ItemPath(self.0.join(&cal).join(format!("{}.ics", uid))),
             uid,
         )
-    }
-    pub fn to_calpath(&self, cal: &str) -> CalPath {
-        CalPath(self.0.join(&cal))
     }
 }
