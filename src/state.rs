@@ -8,7 +8,7 @@ pub mod utils;
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
-    path::PathBuf,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -17,7 +17,7 @@ use icalendar::{Calendar, CalendarComponent, Component};
 use crate::{
     debug, error,
     state::{diff::Diff, event::EventItem, minical::MiniCal, task::TaskItem},
-    types::{CalPath, CalsPath},
+    types::{CalPath, CalsPath, ItemPath},
 };
 
 #[derive(Clone)]
@@ -198,117 +198,76 @@ impl State {
             return Ok(());
         }
 
-        self.cal.keys().for_each(|cal| {
+        fn write_new(path: &Path, comp: impl Into<CalendarComponent>) {
+            let mut cal = Calendar::new();
+            cal.push(comp);
+            if let Err(e) = fs::write(path, cal.to_string()) {
+                error!("Failed to write new file {:?}: {}", path, e);
+            }
+        }
+
+        fn get_cal(path: &ItemPath) -> Result<Calendar, String> {
+            Calendar::from_str(&fs::read_to_string(&path.0).map_err(|e| e.to_string())?)
+        }
+
+        fn get_comp(path: &ItemPath, uuid: &str) -> Result<CalendarComponent, String> {
+            get_cal(path).and_then(|cal| {
+                cal.components
+                    .into_iter()
+                    .find(|c| get_uid(c) == Some(uuid))
+                    .ok_or_else(|| format!("Failed to locate file {:?}", path))
+            })
+        }
+
+        fn delete_item(path: &ItemPath, uuid: &str) {
+            if let Err(e) = get_cal(path).and_then(|mut cal| {
+                cal.components.retain(|c| get_uid(c) != Some(uuid));
+                if cal.components.is_empty() {
+                    fs::remove_file(&path.0).map_err(|e| e.to_string())
+                } else {
+                    fs::write(&path.0, cal.to_string()).map_err(|e| e.to_string())
+                }
+            }) {
+                error!("Failed to delete calendar item: {}", e);
+            }
+        }
+
+        fn get_uid(c: &CalendarComponent) -> Option<&str> {
+            match c {
+                CalendarComponent::Event(e) => e.get_uid(),
+                CalendarComponent::Todo(t) => t.get_uid(),
+                _ => None,
+            }
+        }
+
+        self.cal.keys().into_iter().for_each(|cal| {
             let diff = self.pending.get_cal_diff(cal);
 
-            diff.new_events.into_iter().for_each(|event| {
-                let mut cal = Calendar::new();
-                cal.push(event.to_event());
-                if let Err(e) = fs::write(&event.path.0, cal.to_string()) {
-                    error!("Failed to write new event file {:?}: {}", event.path.0, e);
-                }
-            });
+            diff.new_events
+                .into_iter()
+                .for_each(|e| write_new(&e.path.0, e.to_event()));
+            diff.new_tasks
+                .into_iter()
+                .for_each(|t| write_new(&t.path.0, t.to_todo()));
 
-            diff.new_tasks.into_iter().for_each(|task| {
-                let mut cal = Calendar::new();
-                cal.push(task.to_todo());
-                if let Err(e) = fs::write(&task.path.0, cal.to_string()) {
-                    error!("Failed to write new task file {:?}: {}", task.path.0, e);
-                }
-            });
-
-            diff.events.into_iter().for_each(|(uuid, (_, new))| {
-                if let Err(e) = fs::read_to_string(&new.path.0)
-                    .map_err(|e| e.to_string())
-                    .and_then(|p| Calendar::from_str(&p))
-                    .and_then(|mut cal| {
-                        let event = cal
-                            .components
-                            .iter_mut()
-                            .find_map(|ev| match ev {
-                                CalendarComponent::Event(e)
-                                    if e.get_uid() == Some(uuid.as_str()) =>
-                                {
-                                    Some(e)
-                                }
-                                _ => None,
-                            })
-                            .ok_or("Failed to locate the event within the file!")?;
-                        new.write_to(event);
-                        fs::write(&new.path.0, cal.to_string()).map_err(|e| e.to_string())
-                    })
-                {
-                    error!("Failed to update the calendar event: {}", e);
-                };
-            });
-
-            diff.tasks.into_iter().for_each(|(uuid, (_, new))| {
-                if let Err(e) = fs::read_to_string(&new.path.0)
-                    .map_err(|e| e.to_string())
-                    .and_then(|p| Calendar::from_str(&p))
-                    .and_then(|mut cal| {
-                        let task = cal
-                            .components
-                            .iter_mut()
-                            .find_map(|ev| match ev {
-                                CalendarComponent::Todo(e)
-                                    if e.get_uid() == Some(uuid.as_str()) =>
-                                {
-                                    Some(e)
-                                }
-                                _ => None,
-                            })
-                            .ok_or("Failed to locate the task within the file!")?;
-                        new.write_to(task);
-                        fs::write(&new.path.0, cal.to_string()).map_err(|e| e.to_string())
-                    })
-                {
-                    error!("Failed to update the calendar task: {}", e);
-                };
-            });
-
-            // Deleted items may be part of an ics file that contains multiple events/tasks so we
-            // can't just delete the corresponding files
-
-            diff.deleted_events.into_iter().for_each(|(uuid, path)| {
-                if let Err(e) = fs::read_to_string(&path.0)
-                    .map_err(|e| e.to_string())
-                    .and_then(|p| Calendar::from_str(&p))
-                    .and_then(|mut cal| {
-                        cal.components.retain(|ev| match ev {
-                            CalendarComponent::Event(e) => e.get_uid() != Some(uuid.as_str()),
-                            _ => true,
-                        });
-                        if cal.components.is_empty() {
-                            fs::remove_file(&path.0).map_err(|e| e.to_string())
-                        } else {
-                            fs::write(&path.0, cal.to_string()).map_err(|e| e.to_string())
-                        }
-                    })
-                {
-                    error!("Failed to delete calendar event: {}", e);
-                };
-            });
-
-            diff.deleted_tasks.into_iter().for_each(|(uuid, path)| {
-                if let Err(e) = fs::read_to_string(&path.0)
-                    .map_err(|e| e.to_string())
-                    .and_then(|p| Calendar::from_str(&p))
-                    .and_then(|mut cal| {
-                        cal.components.retain(|ev| match ev {
-                            CalendarComponent::Todo(e) => e.get_uid() != Some(uuid.as_str()),
-                            _ => true,
-                        });
-                        if cal.components.is_empty() {
-                            fs::remove_file(&path.0).map_err(|e| e.to_string())
-                        } else {
-                            fs::write(&path.0, cal.to_string()).map_err(|e| e.to_string())
-                        }
-                    })
-                {
-                    error!("Failed to delete the calendar task: {}", e);
-                };
-            });
+            diff.events
+                .into_iter()
+                .for_each(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
+                    Ok(CalendarComponent::Event(mut e)) => new.write_to(&mut e),
+                    Err(e) => error!("Failed to update event: {}", e),
+                    _ => (),
+                });
+            diff.tasks
+                .into_iter()
+                .for_each(|(uuid, (_, new))| match get_comp(&new.path, &uuid) {
+                    Ok(CalendarComponent::Todo(mut e)) => new.write_to(&mut e),
+                    Err(e) => error!("Failed to update task: {}", e),
+                    _ => (),
+                });
+            diff.deleted_events
+                .into_iter()
+                .chain(diff.deleted_tasks)
+                .for_each(|(uuid, path)| delete_item(&path, &uuid));
         });
 
         Ok(())
