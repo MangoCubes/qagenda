@@ -10,9 +10,10 @@ use crate::{
     types::UUID,
 };
 
-struct CalDiff {
+pub struct CalDiff {
     pub new_events: Vec<EventItem>,
     pub new_tasks: Vec<TaskItem>,
+    /// The first item is the original and the second one is the updated item
     pub events: HashMap<UUID, (EventItem, EventItem)>,
     pub tasks: HashMap<UUID, (TaskItem, TaskItem)>,
     pub deleted_events: Vec<UUID>,
