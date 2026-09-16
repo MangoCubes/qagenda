@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use icalendar::DatePerhapsTime;
 
 use crate::state::details::Details;
-use crate::types::CalsPath;
+use crate::types::{CalsPath, ItemPath};
 use crate::{
     state::{event::EventItem, task::TaskItem},
     types::UUID,
@@ -16,8 +16,8 @@ pub struct CalDiff {
     /// The first item is the original and the second one is the updated item
     pub events: HashMap<UUID, (EventItem, EventItem)>,
     pub tasks: HashMap<UUID, (TaskItem, TaskItem)>,
-    pub deleted_events: Vec<UUID>,
-    pub deleted_tasks: Vec<UUID>,
+    pub deleted_events: Vec<(UUID, ItemPath)>,
+    pub deleted_tasks: Vec<(UUID, ItemPath)>,
 }
 
 #[derive(Debug, Clone)]
@@ -28,8 +28,8 @@ struct InnerDiff {
     events: HashMap<String, HashMap<UUID, (EventItem, EventItem)>>,
     tasks: HashMap<String, HashMap<UUID, (TaskItem, TaskItem)>>,
     /// Contains UUID of the event to delete, and its corresponding summary
-    deleted_events: HashMap<String, Vec<(UUID, String)>>,
-    deleted_tasks: HashMap<String, Vec<(UUID, String)>>,
+    deleted_events: HashMap<String, Vec<(UUID, String, ItemPath)>>,
+    deleted_tasks: HashMap<String, Vec<(UUID, String, ItemPath)>>,
 }
 
 /// Represents differences found in a single calendar task or event. Contains natural language
@@ -125,7 +125,7 @@ impl InnerDiff {
         self.deleted_events.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| SingleDiff::Delete {
+                .map(|(_, s, _)| SingleDiff::Delete {
                     summary: format!("Delete event \"{}\"", s),
                 })
                 .collect::<Vec<SingleDiff>>();
@@ -135,7 +135,7 @@ impl InnerDiff {
         self.deleted_tasks.iter().for_each(|(c, es)| {
             let msgs = es
                 .iter()
-                .map(|(_, s)| SingleDiff::Delete {
+                .map(|(_, s, _)| SingleDiff::Delete {
                     summary: format!("Delete task \"{}\"", s),
                 })
                 .collect::<Vec<SingleDiff>>();
@@ -357,7 +357,7 @@ impl Diff {
                 .cloned()
                 .unwrap_or_default()
                 .into_iter()
-                .map(|(uuid, _)| uuid)
+                .map(|(uuid, _, path)| (uuid, path))
                 .collect(),
             deleted_tasks: guard
                 .deleted_tasks
@@ -365,7 +365,7 @@ impl Diff {
                 .cloned()
                 .unwrap_or_default()
                 .into_iter()
-                .map(|(uuid, _)| uuid)
+                .map(|(uuid, _, path)| (uuid, path))
                 .collect(),
         }
     }

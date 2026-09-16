@@ -28,7 +28,7 @@ pub struct MiniCal {
 
 impl MiniCal {
     pub fn from_calendar(
-        cal_name: String,
+        cal_name: &String,
         cal: HashMap<PathBuf, Vec<CalendarComponent>>,
         max_recurrence_count: u32,
         max_recurrence_date: u32,

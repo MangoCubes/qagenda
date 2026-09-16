@@ -134,21 +134,21 @@ impl TaskItem {
         todo
     }
 
-    pub fn write_to<T: EventLike>(self, e: &mut T) {
+    pub fn write_to<T: EventLike>(&self, e: &mut T) {
         e.summary(&self.summary);
-        match self.start {
-            Some(d) => e.starts(d),
+        match &self.start {
+            Some(d) => e.starts(d.clone()),
             None => e.remove_starts(),
         };
-        match self.due {
-            Some(d) => e.ends(d),
+        match &self.due {
+            Some(d) => e.ends(d.clone()),
             None => e.remove_ends(),
         };
-        match self.details.location {
+        match &self.details.location {
             Some(d) => e.location(&d),
             None => e.remove_location(),
         };
-        match self.details.description {
+        match &self.details.description {
             Some(d) => e.description(&d),
             None => e.remove_description(),
         };
